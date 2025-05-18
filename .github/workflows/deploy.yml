@@ -2,7 +2,7 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    # check if your main branch is called 'main' or 'master' and adjust here
+    # check if main branch is called 'main' or 'master' and adjust here
     branches: 'main'
 
 jobs:

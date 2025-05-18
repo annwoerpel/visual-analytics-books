@@ -7,7 +7,7 @@ const config = {
 			fallback: '404.html'
 		}),
 		paths: {
-			base: process.argv.includes('dev') ? '' : '/annwoerpel.github.io'
+			base: process.argv.includes('dev') ? '' : '/my-app'
 		}
 	}
 };

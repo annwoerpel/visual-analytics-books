@@ -7,7 +7,7 @@ const config = {
 			fallback: '404.html'
 		}),
 		paths: {
-			base: process.argv.includes('dev') ? '' : '/my-app'
+			base: process.argv.includes('dev') ? '' : '/visual-analyztics-books'
 		}
 	}
 };

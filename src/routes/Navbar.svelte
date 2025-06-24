@@ -1,5 +1,6 @@
 <script>
     import { page } from "$app/stores";
+    import { base } from '$app/paths';
     $: routeId = $page.route.id;
 </script>
 
@@ -8,10 +9,10 @@
         <h1>Book Dashboard</h1>
         <ul>
             <li>
-                <a href="/" class:active={routeId=="/"}>Overview</a>
+                <a href="{base}/" class:active={routeId=="/"}>Overview</a>
             </li>
             <li>
-                <a href="/library" class:active={routeId=="/library"}>Library</a>
+                <a href="{base}/library" class:active={routeId=="/library"}>Library</a>
             </li>
         </ul>
     </div>

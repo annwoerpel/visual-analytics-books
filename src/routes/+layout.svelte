@@ -2,6 +2,10 @@
     import Navbar from "./Navbar.svelte";
 </script>
 
+<svelte:head>
+    <title>Book Dashboard</title> 
+</svelte:head>
+
 <Navbar />
 
 <div class="bg-img"></div>

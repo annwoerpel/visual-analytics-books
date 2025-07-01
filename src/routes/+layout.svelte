@@ -1,12 +1,15 @@
 <script>
+    import "../app.css";
     import Navbar from "./Navbar.svelte";
+    export let data;
+    const books = data.books ?? [];
 </script>
 
 <svelte:head>
-    <title>Book Dashboard</title> 
+    <title>Book Analysis Dashboard</title> 
 </svelte:head>
 
-<Navbar />
+<Navbar {books} />
 
 <div class="bg-img"></div>
 

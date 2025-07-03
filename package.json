@@ -17,6 +17,7 @@
 		"@tailwindcss/forms": "^0.5.9",
 		"@tailwindcss/typography": "^0.5.15",
 		"@tailwindcss/vite": "^4.0.0",
+		"@types/colorthief": "^2.6.0",
 		"flowbite": "^3.1.2",
 		"flowbite-svelte": "^1.8.3",
 		"flowbite-svelte-icons": "^2.2.1",
@@ -26,6 +27,7 @@
 	},
 	"dependencies": {
 		"@tailwindcss/vite": "^4.1.11",
+		"colorthief": "^2.6.0",
 		"d3-array": "^3.2.4",
 		"d3-scale": "^4.0.2",
 		"papaparse": "^5.5.3",

@@ -20,17 +20,17 @@
       <h1>Book Analysis Dashboard</h1>
     </div>
 
-    <!-- Äußere Struktur bleibt wie bisher -->
-    <div class="w-[500px]"> <!-- Kein relative hier -->
-        <div class="relative"> <!-- Nur dieser ist relative -->
+    
+    <div class="w-[500px]">
+        <div class="relative">
             <Search
-                size="md"
+                size="sm"
                 bind:value={searchValue}
                 placeholder="Search for books..."
                 inputClass="w-full focus:ring-[#a3c4a5] focus:border-[#a3c4a5] bg-[#fffefc] placeholder-gray-400"
-                style="font-family: 'Coolvetica Rg', Arial; letter-spacing: 1.5px; font-size: 1em;">
-                <Button class="bg-[#a3c4a5] hover:bg-[#657a66] text-[#fffefc]"
-                    style="font-family: 'Coolvetica Rg', Arial; letter-spacing: 1.5px; font-size: 1em;">
+                style="font-family: 'Coolvetica Rg', Arial; letter-spacing: 1.5px; font-size: 0.8em;">
+                <Button class="bg-[#a3c4a5] hover:bg-[#657a66] text-[#fffefc] px-2 py-2"
+                    style="font-family: 'Coolvetica Rg', Arial; letter-spacing: 1.5px; font-size: 0.8em;">
                     Search
                 </Button>
             </Search>
@@ -72,7 +72,7 @@
     h1 {
 		font-family: Coolvetica Rg Cond, Arial;
         letter-spacing: 2px;
-		font-size: 2em;
+		font-size: 1.3em;
         font-weight: normal;
         text-align: center;
         margin: 0;
@@ -88,9 +88,8 @@
         margin-left: 0.3%;
         margin-right: 0.3%;
         margin-top: 0.3%;
-        padding: 0.5em;
+        padding: 0.3em;
         border-radius: 12px;
-        border: 1px solid #200d00;
     }
     .container {
         display: flex;
@@ -108,7 +107,7 @@
         text-decoration: none;
         font-family: Coolvetica Rg Cond, Arial;
         letter-spacing: 2px;
-		font-size: 2em;
+		font-size: 1.3em;
         font-weight: normal;
         text-align: center;
         margin: 0;

@@ -1,5 +1,5 @@
 <script>
-    const { data } = $props();
+    export let data;
 
     const rescale = 
         function(x, domain_min, domain_max, range_min, range_max) {
@@ -14,7 +14,31 @@
         const scoreB = b.average_rating * Math.log10(b.ratings_count + 1);
         return scoreB - scoreA;
       }).slice(0, 10);
+
+    // test if book details bar is working 
+    import BookComponent from "./BookComponent.svelte";
+    import BookSidebar from "./BookSidebar.svelte";
+
+    let books = data.books ?? [];
+
+    let selectedBook = null;
+
+    function openSidebar(book) {
+        selectedBook = book;
+    }
+
+    function closeSidebar() {
+        selectedBook = null;
+    }
 </script>
+
+<div class="grid grid-cols-10 gap-4 p-4">
+  {#each books as book}
+    <BookComponent {book} onOpenSidebar={openSidebar} />
+  {/each}
+</div>
+
+<BookSidebar book={selectedBook} onClose={closeSidebar} />
 
 <h2>Top 10 Books</h2>
 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">

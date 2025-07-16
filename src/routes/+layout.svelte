@@ -1,19 +1,24 @@
+
 <script>
     import "../app.css";
     import Navbar from "./Navbar.svelte";
     export let data;
+    import { writable } from 'svelte/store';
     const books = data.books ?? [];
+    // Globale Filterwerte als Store
+    export let searchValue = "";
+    export let selectedGenre = "";
 </script>
 
 <svelte:head>
     <title>Book Analysis Dashboard</title> 
 </svelte:head>
 
-<Navbar {books} />
+<Navbar {books} bind:searchValue bind:selectedGenre />
 
 <div class="bg-img"></div>
 
-<slot />
+<slot {searchValue} {selectedGenre} />
 
 <style>
     :global(.bg-img) {

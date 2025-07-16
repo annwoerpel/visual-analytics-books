@@ -1,6 +1,8 @@
 <script lang="ts">
     export let book;
+    export let inLibrary = false;
     export let onClose = () => {};
+    export let onToggleLibrary = (book: any, inLibrary: boolean) => {};
     import { fly } from 'svelte/transition';
     import { Rating } from "flowbite-svelte";
 
@@ -41,12 +43,20 @@
     use:clickOutside
     transition:fly="{{ x: 400, duration: 400 }}"
     style="background: linear-gradient(to bottom, {book.dominant_color}, rgba(255,255,255,0.95));"
-
   >
     <button class="close-btn" on:click={onClose}>×</button>
     <div style="color: {textColor};">
         <h2>{book.title}</h2>
         <h3>{book.subtitle}</h3>
+        <div style="margin-bottom: 1rem;">
+          <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+            <input type="checkbox" bind:checked={inLibrary} on:change={() => onToggleLibrary(book, inLibrary)} />
+            <span style="font-family: 'Coolvetica Rg Cond', Arial;
+                          font-size: 1.2rem;
+                          letter-spacing: 1.3px;"
+            >Add to my Library</span>
+          </label>
+        </div>
         <p>
         {#key book.isbn13}
             <Rating id={book.title} total={5} size={35} rating={book.average_rating} />

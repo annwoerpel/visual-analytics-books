@@ -1,15 +1,11 @@
 <script>
+    import { Tooltip, Button } from "flowbite-svelte";
+
     export let book;
+    export let index;
     export let onOpenSidebar = () => {};
 
     let showTooltip = false;
-    let tooltipX = 0;
-    let tooltipY = 0;
-
-    function handleMouseMove(event) {
-        tooltipX = event.clientX + 12; // etwas Abstand zum Cursor
-        tooltipY = event.clientY + 12;
-    }
 
     function handleMouseEnter() {
         showTooltip = true;
@@ -22,50 +18,74 @@
 
 <button
   type="button"
-  class="book-card"
+  class="group perspective w-full h-full relative"
   on:click={() => onOpenSidebar(book)}
   on:mouseenter={handleMouseEnter}
   on:mouseleave={handleMouseLeave}
-  on:mousemove={handleMouseMove}
 >
-  <img src={book.thumbnail} alt="Cover of {book.title}" class="thumbnail" />
 
+  <!-- Tooltip: außerhalb der Flip-Card -->
   {#if showTooltip}
     <div
-      class="hover-tooltip"
-      style="top: {tooltipY}px; left: {tooltipX}px;"
+      class="hover-tooltip left-1/2 -translate-x-1/2 top-full mt-2"
     >
       {book.title}<br />
-      <span>{book.authors}</span><br />
+      <span>{book.authors}</span>
     </div>
   {/if}
+
+  <!-- Flip Card -->
+  <div
+    class="flip-card transition duration-500 transform w-full h-full relative"
+    class:group-hover:rotate-y-180={index != 0}
+  >
+    <!-- Front -->
+    <div class="flip-front absolute w-full h-full backface-hidden">
+      <img src={book.thumbnail} alt="Cover of {book.title}" class="thumbnail" />
+    </div>
+    <!-- Back -->
+    <div class="flip-back absolute w-full h-full backface-hidden rotate-y-180 bg-[#a3c4a5] text-white flex items-center justify-center shadow font-bold text-2xl">
+      {index + 1}
+    </div>
+  </div>
+
 </button>
 
 <style>
-  .book-card {
-    position: relative;
-    background-color: transparent;
-    cursor: pointer;
-    border: none;
-    padding: 0;
-    width: 100%;
-    aspect-ratio: 2 / 3;
+  .perspective {
+    perspective: 1000px;
   }
 
-  .book-card:hover { box-shadow: 0 4px 12px rgba(39, 28, 16, 0.404); }
+  .flip-card {
+    transform-style: preserve-3d;
+  }
 
-  .book-card:hover .thumbnail { transform: scale(1.05); }
+  .flip-front,
+  .flip-back {
+    backface-visibility: hidden;
+    width: 100%;
+    height: 100%;
+    display: flex;
+  }
+
+  .flip-back {
+    transform: rotateY(180deg);
+  }
+
+  .rotate-y-180 {
+    transform: rotateY(180deg);
+  }
 
   .thumbnail {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    display: block;
-    transition: transform 0.3s ease;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
   }
 
   .hover-tooltip {
-    position: fixed;
+    position: absolute;
+    z-index: 10000;
     background-color: rgba(255, 254, 252, 0.95);
     color: #000000;
     padding: 0.5rem 0.75rem;
@@ -73,8 +93,6 @@
     border-radius: 6px;
     font-family: 'Coolvetica Rg', Arial;
     font-size: 0.85rem;
-    pointer-events: none;
-    z-index: 9999;
     box-shadow: 0 2px 8px rgba(38, 26, 18, 0.339);
     white-space: nowrap;
   }

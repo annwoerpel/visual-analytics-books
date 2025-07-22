@@ -11,3 +11,6 @@ export async function load({ fetch, params }) {
     books: parsedCSV.data 
   }
 }
+
+export const ssr = false;
+export const csr = true;

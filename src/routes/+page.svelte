@@ -1,74 +1,166 @@
 <script>
-    export let data;
+  import { Chart } from 'svelte-echarts'
+  import { init, use } from 'echarts/core'
+  import { ScatterChart, RadarChart } from 'echarts/charts'
+  import { GridComponent, TitleComponent } from 'echarts/components'
+  import { CanvasRenderer } from 'echarts/renderers'
 
-    const rescale = 
-        function(x, domain_min, domain_max, range_min, range_max) {
-            return ((range_max - range_min)*(x-domain_min))/(domain_max-domain_min) + range_min
-        }
+  import DoubleRangeSlider from './DoubleRangeSlider.svelte';
+  import BookComponent from './BookComponent.svelte';
+  import BookSidebar from './BookSidebar.svelte';
+  import { reverse } from 'd3-array';
 
-    const coverUrl = "https://books.google.com/books/content?id=KQZCPgAACAAJ&printsec=frontcover&img=1&zoom=1&source=gbs_api";
+  export let data;
+  let books = data.books ?? [];
 
-    // get 10 most popular books of all time
-    const top_10_books  = data.books.filter(book => book.average_rating && book.ratings_count).sort((a, b) => {
-        const scoreA = a.average_rating * Math.log10(a.ratings_count + 1);
-        const scoreB = b.average_rating * Math.log10(b.ratings_count + 1);
-        return scoreB - scoreA;
-      }).slice(0, 10);
+  // Initialbereich: 1970–2020
+  let start = 1970;
+  let end = 2020;
 
-    // test if book details bar is working 
-    import BookComponent from "./BookComponent.svelte";
-    import BookSidebar from "./BookSidebar.svelte";
+  // Dynamische Jahrgrenzen
+  let minPublishedYear = 1900;
+  let maxPublishedYear = 2025;
 
-    let books = data.books ?? [];
+  // Reaktiv: min/max aus Daten berechnen
+  $: if (books.length > 0) {
+    const allYears = books
+      .map(b => parseInt(b.published_year))
+      .filter(y => !isNaN(y));
+    minPublishedYear = Math.min(...allYears);
+    maxPublishedYear = Math.max(...allYears);
+  }
 
-    let selectedBook = null;
+  // Top 10 Bücher im aktuellen Intervall
+  $: top_10_books = books
+    .filter(book =>
+      book.average_rating &&
+      book.ratings_count &&
+      book.published_year >= start &&
+      book.published_year <= end
+    )
+    .sort((a, b) => {
+      const scoreA = a.average_rating * Math.log10(a.ratings_count + 1);
+      const scoreB = b.average_rating * Math.log10(b.ratings_count + 1);
+      return scoreB - scoreA;
+    })
+    .slice(0, 10);
 
-    function openSidebar(book) {
-        selectedBook = book;
-    }
+  let selectedBook = null;
+  function openSidebar(book) {
+    selectedBook = book;
+  }
+  function closeSidebar() {
+    selectedBook = null;
+  }
 
-    function closeSidebar() {
-        selectedBook = null;
-    }
+  use([ScatterChart, RadarChart, GridComponent, CanvasRenderer, TitleComponent]);
+
+  $: scatterData = top_10_books.map((book, i) => ({
+    value: [parseInt(book.published_year), i + 1],
+    symbol: `image://${book.thumbnail}`
+  }));
+
+  $: options = {
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' }
+    },
+    xAxis: {
+      min: Math.max(start - 1, minPublishedYear),
+      max: Math.min(end + 1, maxPublishedYear),
+      interval: 1,
+      axisLabel: { formatter: v => v }
+    },
+    yAxis: {
+      min: 1,
+      max: 10,
+      inverse: true,
+      interval: 1
+    },
+    series: [{
+      type: 'scatter',
+      data: scatterData,
+      symbolSize: () => [60, 90]
+    }]
+  };
 </script>
 
-<div class="grid grid-cols-10 gap-4 p-4">
-  {#each books as book}
-    <BookComponent {book} onOpenSidebar={openSidebar} />
-  {/each}
+<div class="flex flex-row justify-center items-start gap-3 px-4">
+  <main>
+    <h1>TOP 10 BOOKS</h1>
+
+    <DoubleRangeSlider
+      bind:start
+      bind:end
+      {minPublishedYear}
+      {maxPublishedYear}
+    />
+
+    <div class="labels">
+      <div class="label">{start}</div>
+      <div class="label">{end}</div>
+    </div>
+    
+
+    <div class="grid grid-cols-5 gap-1 mt-7 items-center p-4">
+      {#each top_10_books as book, i}
+        <div class="w-full h-32">
+          <BookComponent {book} index={i} onOpenSidebar={openSidebar} />
+        </div>
+      {/each}
+    </div>
+
+  </main>
+
+  <div class="graph">
+    <Chart {init} {options} />
+  </div>
 </div>
+
 
 <BookSidebar book={selectedBook} onClose={closeSidebar} />
 
-<h2>Top 10 Books</h2>
-<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-  {#each top_10_books as book}
-    <div class="p-4 border rounded shadow bg-white">
-      <img src={book.thumbnail} alt="Cover von {book.title}" class="w-full h-auto mb-4 rounded" />
-      <h2 class="text-xl font-bold">{book.title}</h2>
-      <p class="text-sm text-gray-600">{book.authors}</p>
-      <p class="text-sm mt-1">{book.average_rating} ({book.ratings_count} Bewertungen)</p>
-    </div>
-  {/each}
-</div>
-
-<svg width="800" height="400">
-    {#each data.books as book}
-        <circle cx={rescale(book.published_year, 1850, 2030, 0, 800)} 
-                cy={rescale(book.num_pages, 0, 5000, 400, 0)} 
-                r=4 />
-    {/each}
-</svg>
-
-<img src={coverUrl} alt="Buchcover" />
-
 <style>
-    svg {
-        border: 1px;
-        border-style: solid;
-    }
-    circle {
-        fill: steelblue;
-        fill-opacity: 0.5;
-    }
+  @font-face { font-family:Milkyway; src: url('/fonts/Milkyway.ttf'); }
+  @font-face { font-family:Coolvetica Rg; src: url('/fonts/Coolvetica Rg.otf'); }
+  @font-face { font-family:Coolvetica Rg Cond; src: url('/fonts/Coolvetica Rg Cond.otf'); }
+
+  .graph {
+    width: 70vw;
+    height: 50vh;
+    background-color: #fffefc;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    margin: 0 auto;
+    margin-top: 20px;
+  }
+
+  main {
+    text-align: center;
+    padding: 1em;
+    width: 540px;
+    background-color: #fffefc;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    margin-top: 20px;
+  }
+
+  h1 {
+    font-family: Coolvetica Rg Cond, Arial;
+    letter-spacing: 2px;
+    font-size: 1.7em;
+    font-weight: normal;
+    text-align: center;
+    margin: 0;
+    color: rgba(0, 0, 0, 0.8);
+  }
+
+  .label:first-child {
+    float: left;
+  }
+
+  .label:last-child {
+    float: right;
+  }
+
 </style>

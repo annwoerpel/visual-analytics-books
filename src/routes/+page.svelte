@@ -103,6 +103,7 @@
     symbol: `image://${book.thumbnail}`
   }));
 
+  // Scatter Chart Konfiguration
   $: scatterChartOptions = {
     tooltip: {
       trigger: 'axis',
@@ -127,8 +128,9 @@
     }]
   };
 
+  // Stacked Area Chart Konfiguration
   $: stackedAreaChartOptions = {
-    title: { text: 'AMOUNT OF PUBLICATIONS' },
+    title: { text: 'Amount of Publications' },
     tooltip: { trigger: 'axis', axisPointer: { type: 'cross' } },
     legend: { data: topGenresByCount, bottom: 0 },
     toolbox: { feature: { saveAsImage: {} } },
@@ -136,6 +138,128 @@
     xAxis: [{ type: 'category', boundaryGap: false, data: stackedYears }],
     yAxis: [{ type: 'value' }],
     series: stackedAreaSeries
+  };
+
+  // Bump Chart Konfiguration
+  $: bumpYears = [];
+  $: {
+    const span = end - start;
+    const step = Math.max(1, Math.floor(span / 9)); // 9 Schritte → 10 Werte
+
+    let tempYears = [];
+    for (let i = 0; i < 10; i++) {
+      const y = end - i * step;
+      if (y < start) break;
+      tempYears.push(Math.round(y));
+    }
+
+    bumpYears = tempYears.sort((a, b) => a - b).map(String); // Chronologisch sortieren
+  }
+
+  function computeGenreRanksForTopGenres(genres, years) {
+    const genreScores = new Map();
+
+    genres.forEach(g => genreScores.set(g, []));
+
+    years.forEach((yearStr, index) => {
+      const year = parseInt(yearStr);
+      const scores = genres.map(g => {
+        const relevantBooks = books.filter(b =>
+          parseInt(b.published_year) === year &&
+          b.categories?.split(',').map(c => c.trim()).includes(g)
+        );
+        const score = relevantBooks.length > 0
+          ? relevantBooks
+              .map(b => parseFloat(b.average_rating) * Math.log10(parseFloat(b.ratings_count || 1)))
+              .filter(s => !isNaN(s))
+              .reduce((a, b) => a + b, 0) / relevantBooks.length
+          : null;
+        return { genre: g, score };
+      }).filter(s => s.score !== null);
+
+      // Sortiere nach Score
+      scores.sort((a, b) => b.score - a.score);
+
+      scores.forEach((entry, i) => {
+        const list = genreScores.get(entry.genre);
+        list.push(i + 1);
+        genreScores.set(entry.genre, list);
+      });
+
+      // Null für andere Jahre auffüllen
+      genres.forEach(g => {
+        const arr = genreScores.get(g);
+        if (arr.length < index + 1) arr.push(null);
+      });
+    });
+
+    return genreScores;
+  }
+
+  $: top5GenresOverall = Object.entries(genreYearCounts)
+    .map(([genre, yearData]) => {
+      const count = Object.values(yearData).reduce((sum, v) => sum + v, 0);
+      return { genre, count };
+    })
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 5)
+    .map(g => g.genre);
+
+  $: bumpSeriesList = [];
+  $: genreRanks = computeGenreRanksForTopGenres(top5GenresOverall, bumpYears);
+
+  $: bumpSeriesList = Array.from(genreRanks.entries()).map(([genre, ranks]) => ({
+    name: genre,
+    type: 'line',
+    data: ranks,
+    smooth: false,
+    connectNulls: false,
+    symbolSize: 10,
+    endLabel: {
+      show: true,
+      formatter: genre,
+      distance: 10
+    },
+    lineStyle: { width: 3 },
+    connectNulls: true
+  }));
+
+ $: bumpChartOptions = {
+    labelLayout: {
+      hideOverlap: true,
+      moveOverlap: true
+    },
+    title: { text: 'Genre Popularity' },
+    tooltip: { trigger: 'item' },
+    grid: {
+      left: 30,
+      right: 110,
+      bottom: 40,
+      containLabel: true
+    },
+    legend: { show: true, bottom: 0 },
+    toolbox: { feature: { saveAsImage: {} } },
+    xAxis: {
+      type: 'category',
+      splitLine: {
+      show: true
+    },
+      boundaryGap: false,
+      axisLabel: { fontSize: 14 },
+      data: bumpYears
+    },
+    yAxis: {
+      type: 'value',
+      inverse: true,
+      interval: 1,
+      min: 1,
+      max: topGenresByCount.length,
+      axisLabel: {
+        formatter: '#{value}',
+        fontSize: 14
+      }
+    },
+    series: bumpSeriesList
   };
 </script>
 
@@ -174,6 +298,10 @@
 
 <div class="graph-2">
   <Chart {init} options={stackedAreaChartOptions} />
+</div>
+
+<div class="graph-2">
+  <Chart {init} options={bumpChartOptions} />
 </div>
 
 <BookSidebar book={selectedBook} onClose={closeSidebar} />

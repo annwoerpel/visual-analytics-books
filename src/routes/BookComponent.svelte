@@ -4,16 +4,7 @@
     export let book;
     export let index;
     export let onOpenSidebar = () => {};
-
-    let showTooltip = false;
-
-    function handleMouseEnter() {
-        showTooltip = true;
-    }
-
-    function handleMouseLeave() {
-        showTooltip = false;
-    }
+    
 </script>
 
 <button
@@ -23,17 +14,6 @@
   on:mouseenter={handleMouseEnter}
   on:mouseleave={handleMouseLeave}
 >
-
-  <!-- Tooltip: außerhalb der Flip-Card -->
-  {#if showTooltip}
-    <div
-      class="hover-tooltip left-1/2 -translate-x-1/2 top-full mt-2"
-    >
-      {book.title}<br />
-      <span>{book.authors}</span>
-    </div>
-  {/if}
-
   <!-- Flip Card -->
   <div
     class="flip-card transition duration-500 transform w-full h-full relative"
@@ -50,6 +30,11 @@
   </div>
 
 </button>
+<Tooltip>
+      {book.title}<br />
+      <span>{book.authors}</span>
+</Tooltip>
+
 
 <style>
   .perspective {
@@ -81,20 +66,6 @@
     height: 100%;
     object-fit: cover;
     box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-  }
-
-  .hover-tooltip {
-    position: absolute;
-    z-index: 10000;
-    background-color: rgba(255, 254, 252, 0.95);
-    color: #000000;
-    padding: 0.5rem 0.75rem;
-    border: 1px solid #ccc;
-    border-radius: 6px;
-    font-family: 'Coolvetica Rg', Arial;
-    font-size: 0.85rem;
-    box-shadow: 0 2px 8px rgba(38, 26, 18, 0.339);
-    white-space: nowrap;
   }
 
   span {

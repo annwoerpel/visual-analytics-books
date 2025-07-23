@@ -37,7 +37,7 @@
   <!-- Flip Card -->
   <div
     class="flip-card transition duration-500 transform w-full h-full relative"
-    class:group-hover:rotate-y-180={index != 0}
+    class:group-hover:rotate-y-180={index != 100}
   >
     <!-- Front -->
     <div class="flip-front absolute w-full h-full backface-hidden">

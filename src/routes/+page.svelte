@@ -1,9 +1,10 @@
 <script>
   import { Chart } from 'svelte-echarts'
   import { init, use } from 'echarts/core'
-  import { ScatterChart, RadarChart } from 'echarts/charts'
-  import { GridComponent, TitleComponent } from 'echarts/components'
+  import { ScatterChart, RadarChart, LineChart } from 'echarts/charts'
+  import { GridComponent, LegendComponent, TitleComponent, ToolboxComponent, TooltipComponent } from 'echarts/components'
   import { CanvasRenderer } from 'echarts/renderers'
+  import { UniversalTransition } from 'echarts/features'
 
   import DoubleRangeSlider from './DoubleRangeSlider.svelte';
   import BookComponent from './BookComponent.svelte';
@@ -53,14 +54,56 @@
     selectedBook = null;
   }
 
-  use([ScatterChart, RadarChart, GridComponent, CanvasRenderer, TitleComponent]);
+  $: genreYearCounts = {}; 
+  $: books.forEach(b => {
+    const year = parseInt(b.published_year);
+    const genres = b.categories?.split(',').map(c => c.trim()) ?? [];
+    if (!isNaN(year)) {
+      genres.forEach(g => {
+        if (!genreYearCounts[g]) genreYearCounts[g] = {};
+        genreYearCounts[g][year] = (genreYearCounts[g][year] || 0) + 1;
+      });
+    }
+  });
+
+  $: topGenresByCount = Object.entries(genreYearCounts)
+    .sort((a, b) => {
+      const totalA = Object.values(a[1]).reduce((sum, v) => sum + v, 0);
+      const totalB = Object.values(b[1]).reduce((sum, v) => sum + v, 0);
+      return totalB - totalA;
+    })
+    .slice(0, 5)
+    .map(([genre]) => genre);
+
+
+  $: stackedYears = Array.from(new Set(
+    books
+      .map(b => parseInt(b.published_year))
+      .filter(y => !isNaN(y) && y >= start && y <= end)
+  )).sort((a, b) => a - b);
+
+
+  $: stackedAreaSeries = topGenresByCount.map(genre => {
+    const yearData = stackedYears.map(y => genreYearCounts[genre]?.[y] || 0);
+    return {
+      name: genre,
+      type: 'line',
+      stack: 'total',
+      areaStyle: {},
+      emphasis: { focus: 'series' },
+      data: yearData
+    };
+  });
+
+
+  use([ScatterChart, RadarChart, GridComponent, CanvasRenderer, TitleComponent, ToolboxComponent, TooltipComponent, LegendComponent, LineChart, UniversalTransition]);
 
   $: scatterData = top_10_books.map((book, i) => ({
     value: [parseInt(book.published_year), i + 1],
     symbol: `image://${book.thumbnail}`
   }));
 
-  $: options = {
+  $: scatterChartOptions = {
     tooltip: {
       trigger: 'axis',
       axisPointer: { type: 'shadow' }
@@ -82,6 +125,17 @@
       data: scatterData,
       symbolSize: () => [60, 90]
     }]
+  };
+
+  $: stackedAreaChartOptions = {
+    title: { text: 'AMOUNT OF PUBLICATIONS' },
+    tooltip: { trigger: 'axis', axisPointer: { type: 'cross' } },
+    legend: { data: topGenresByCount, bottom: 0 },
+    toolbox: { feature: { saveAsImage: {} } },
+    grid: { left: '3%', right: '4%', bottom: '8%', containLabel: true },
+    xAxis: [{ type: 'category', boundaryGap: false, data: stackedYears }],
+    yAxis: [{ type: 'value' }],
+    series: stackedAreaSeries
   };
 </script>
 
@@ -113,10 +167,14 @@
   </main>
 
   <div class="graph">
-    <Chart {init} {options} />
+    <Chart {init} options={scatterChartOptions} />
   </div>
+
 </div>
 
+<div class="graph-2">
+  <Chart {init} options={stackedAreaChartOptions} />
+</div>
 
 <BookSidebar book={selectedBook} onClose={closeSidebar} />
 
@@ -126,6 +184,16 @@
   @font-face { font-family:Coolvetica Rg Cond; src: url('/fonts/Coolvetica Rg Cond.otf'); }
 
   .graph {
+    width: 70vw;
+    height: 50vh;
+    background-color: #fffefc;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    margin: 0 auto;
+    margin-top: 20px;
+  }
+
+  .graph-2 {
     width: 70vw;
     height: 50vh;
     background-color: #fffefc;

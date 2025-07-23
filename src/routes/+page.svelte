@@ -9,6 +9,7 @@
   import DoubleRangeSlider from './DoubleRangeSlider.svelte';
   import BookComponent from './BookComponent.svelte';
   import BookSidebar from './BookSidebar.svelte';
+  import ColorBlob from './ColorBlob.svelte';
   import { reverse } from 'd3-array';
 
   export let data;
@@ -46,6 +47,15 @@
     })
     .slice(0, 10);
 
+  // Top 10 Autoren
+  $: top_10_authors = Array.from(new Set(
+    top_10_books.map(book => book.authors)
+  )).slice(0, 10);
+
+  $: top_10_colors = Array.from(new Set(
+    top_10_books.map(book => book.dominant_color)
+  )).slice(0, 5);
+
   let selectedBook = null;
   function openSidebar(book) {
     selectedBook = book;
@@ -75,13 +85,11 @@
     .slice(0, 5)
     .map(([genre]) => genre);
 
-
   $: stackedYears = Array.from(new Set(
     books
       .map(b => parseInt(b.published_year))
       .filter(y => !isNaN(y) && y >= start && y <= end)
   )).sort((a, b) => a - b);
-
 
   $: stackedAreaSeries = topGenresByCount.map(genre => {
     const yearData = stackedYears.map(y => genreYearCounts[genre]?.[y] || 0);
@@ -94,7 +102,6 @@
       data: yearData
     };
   });
-
 
   use([ScatterChart, RadarChart, GridComponent, CanvasRenderer, TitleComponent, ToolboxComponent, TooltipComponent, LegendComponent, LineChart, UniversalTransition]);
 
@@ -264,7 +271,6 @@
 
 <div class="flex flex-row justify-center items-start gap-3 px-4">
   <main>
-    <h1>TOP 10 BOOKS</h1>
 
     <DoubleRangeSlider
       bind:start
@@ -272,18 +278,31 @@
       {minPublishedYear}
       {maxPublishedYear}
     />
-
     <div class="labels">
       <div class="label">{start}</div>
       <div class="label">{end}</div>
     </div>
-    
 
-    <div class="grid grid-cols-5 gap-1 mt-7 items-center p-4">
+    <h1>Top 10 Books</h1>
+    <div class="grid grid-cols-5 gap-1 items-center p-4">
       {#each top_10_books as book, i}
         <div class="w-full h-32">
           <BookComponent {book} index={i} onOpenSidebar={openSidebar} />
         </div>
+      {/each}
+    </div>
+
+    <h1>Top 10 Authors</h1>
+      <div class="p-4">
+        {#each top_10_authors as author}
+          <p>{author}</p>
+        {/each}
+      </div>
+
+    <h1>Top 5 Cover Colors</h1>
+    <div class="grid grid-cols-5 gap-1 items-center p-4">
+      {#each top_10_colors as color}
+        <ColorBlob color={color} size={60} />
       {/each}
     </div>
 
@@ -348,6 +367,8 @@
     text-align: center;
     margin: 0;
     color: rgba(0, 0, 0, 0.8);
+    margin-top: 10px;
+    margin-bottom: -10px;
   }
 
   .label:first-child {

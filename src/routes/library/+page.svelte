@@ -3,7 +3,7 @@
 
     import BookComponent from "../BookComponent.svelte";
     import BookSidebar from "../BookSidebar.svelte";
-    import { Tabs, TabItem, Checkbox, Search } from "flowbite-svelte";
+    import { Tabs, TabItem, Checkbox, Search, Tooltip } from "flowbite-svelte";
 
     import { Chart } from 'svelte-echarts'
     import { init, use } from 'echarts/core'
@@ -207,6 +207,7 @@
             style="font-family: 'Coolvetica Rg', Arial; letter-spacing: 1.5px; font-size: 0.8em;"
         >
         </Search>
+        <Tooltip>Search by title, author or ISBN</Tooltip>
         <div class="w-full mt-3">
             <div class="mb-2 mt-3" style="font-family: Coolvetica Rg Cond, Arial;
                                             letter-spacing: 2px;
@@ -265,7 +266,7 @@
                     <div class="grid grid-cols-10 gap-1 items-center p-4">
                         {#each localFilteredBooks.filter(book => myLibrary.includes(book.isbn13)) as book}
                             <div class="w-full h-35">
-                                <BookComponent {book} index={0} onOpenSidebar={openSidebar} />
+                                <BookComponent {book} index={100} onOpenSidebar={openSidebar} />
                             </div>
                         {/each}
                     </div>

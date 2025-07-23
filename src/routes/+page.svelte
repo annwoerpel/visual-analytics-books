@@ -205,7 +205,6 @@
     .slice(0, 5)
     .map(g => g.genre);
 
-  $: bumpSeriesList = [];
   $: genreRanks = computeGenreRanksForTopGenres(top5GenresOverall, bumpYears);
 
   $: bumpSeriesList = Array.from(genreRanks.entries()).map(([genre, ranks]) => ({

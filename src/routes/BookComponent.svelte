@@ -21,7 +21,13 @@
   >
     <!-- Front -->
     <div class="flip-front absolute w-full h-full backface-hidden">
-      <img src={book.thumbnail} alt="Cover of {book.title}" class="thumbnail" />
+      <img
+        src={`/thumbnails/${book.isbn13}.jpeg`}
+        alt={`Cover of ${book.title}`}
+        class="thumbnail"
+        on:error={(e) => e.target.src = '/thumbnails/image_not_found.png'}
+      />
+
     </div>
     <!-- Back -->
     <div class="flip-back absolute w-full h-full backface-hidden rotate-y-180 bg-[#a3c4a5] text-white flex items-center justify-center shadow font-bold text-2xl">

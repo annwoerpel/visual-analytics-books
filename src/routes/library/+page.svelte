@@ -247,7 +247,7 @@
             >
                 <div class="scrollable-tab-content">
                     <div class="grid grid-cols-10 gap-1 items-center p-4">
-                        {#each localFilteredBooks as book}
+                        {#each localFilteredBooks.slice(0, 100) as book}
                             <div class="w-full h-35">
                                 <BookComponent {book} index={100} onOpenSidebar={openSidebar} />
                             </div>

@@ -6,6 +6,8 @@
   import { CanvasRenderer } from 'echarts/renderers'
   import { UniversalTransition } from 'echarts/features'
 
+  import { Banner, Button, Dropdown, DropdownDivider, DropdownItem, Select, Label } from "flowbite-svelte";
+
   import DoubleRangeSlider from './DoubleRangeSlider.svelte';
   import BookComponent from './BookComponent.svelte';
   import BookSidebar from './BookSidebar.svelte';
@@ -32,13 +34,14 @@
     maxPublishedYear = Math.max(...allYears);
   }
 
-  // Top 10 Bücher im aktuellen Intervall
+  // Top 10 Bücher im aktuellen Intervall und im aktuellen Genre
   $: top_10_books = books
     .filter(book =>
       book.average_rating &&
       book.ratings_count &&
       book.published_year >= start &&
-      book.published_year <= end
+      book.published_year <= end &&
+      (selectedGenre === "All Genres" || book.categories?.split(',').map(c => c.trim()).includes(selectedGenre))
     )
     .sort((a, b) => {
       const scoreA = a.average_rating * Math.log10(a.ratings_count + 1);
@@ -52,6 +55,7 @@
     top_10_books.map(book => book.authors)
   )).slice(0, 10);
 
+  // Top 5 Cover-Farben
   $: top_10_colors = Array.from(new Set(
     top_10_books.map(book => book.dominant_color)
   )).slice(0, 5);
@@ -74,6 +78,33 @@
         genreYearCounts[g][year] = (genreYearCounts[g][year] || 0) + 1;
       });
     }
+  });
+
+  let selectedGenre = "All Genres"; // leeres Feld zeigt alle
+  let showDropdown = false;
+  // Referenz auf das Dropdown-Element
+  let dropdownRef;
+
+  function selectGenre(genre) {
+    selectedGenre = genre;
+    showDropdown = false;
+  }
+
+  // Listener bei Mount setzen
+  import { onMount, onDestroy } from 'svelte';
+
+  function handleClickOutside(event) {
+    if (dropdownRef && !dropdownRef.contains(event.target)) {
+      showDropdown = false;
+    }
+  }
+
+  onMount(() => {
+    window.addEventListener('click', handleClickOutside);
+  });
+
+  onDestroy(() => {
+    window.removeEventListener('click', handleClickOutside);
   });
 
   $: topGenresByCount = Object.entries(genreYearCounts)
@@ -269,19 +300,9 @@
   };
 </script>
 
+
 <div class="flex flex-row justify-center items-start gap-3 px-4">
   <main>
-
-    <DoubleRangeSlider
-      bind:start
-      bind:end
-      {minPublishedYear}
-      {maxPublishedYear}
-    />
-    <div class="labels">
-      <div class="label">{start}</div>
-      <div class="label">{end}</div>
-    </div>
 
     <h1>Top 10 Books</h1>
     <div class="grid grid-cols-5 gap-1 items-center p-4">
@@ -322,12 +343,57 @@
   <Chart {init} options={bumpChartOptions} />
 </div>
 
+<Banner dismissable={false} type="bottom" class="bg-[#fffefc] h-14">
+  <div class="container">
+
+    <div class="slider">
+      <DoubleRangeSlider 
+        bind:start
+        bind:end
+        {minPublishedYear}
+        {maxPublishedYear}
+      />
+      <div class="labels">
+        <div class="label">{start}</div>
+        <div class="label">{end}</div>
+      </div>
+    </div>
+
+    <div class="dropdown" bind:this={dropdownRef}>
+      {#if showDropdown}
+        <div class="dropdown-list up">
+          {#each ["All Genres", ...top5GenresOverall] as genre}
+            <button
+              class="item {selectedGenre === genre ? 'active' : ''}"
+              on:click={() => selectGenre(genre)}>
+              {genre}
+            </button>
+          {/each}
+        </div>
+      {/if}
+
+      <button on:click={() => showDropdown = !showDropdown}>
+        {selectedGenre}
+      </button>
+    </div>
+
+  </div>
+</Banner>
+
 <BookSidebar book={selectedBook} onClose={closeSidebar} />
 
 <style>
   @font-face { font-family:Milkyway; src: url('/fonts/Milkyway.ttf'); }
   @font-face { font-family:Coolvetica Rg; src: url('/fonts/Coolvetica Rg.otf'); }
   @font-face { font-family:Coolvetica Rg Cond; src: url('/fonts/Coolvetica Rg Cond.otf'); }
+
+  .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px;
+    gap: 24px;
+  }
 
   .graph {
     width: 70vw;
@@ -347,6 +413,12 @@
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
     margin: 0 auto;
     margin-top: 20px;
+  }
+
+  .slider {
+    width: 50vw;
+    margin: 0 auto;
+    text-align: center;
   }
 
   main {
@@ -377,6 +449,42 @@
 
   .label:last-child {
     float: right;
+  }
+
+  .dropdown {
+    position: relative;
+    display: inline-block;
+    text-align: right;
+    background-color: rgb(216, 216, 216);
+  }
+
+  .dropdown-list.up {
+    position: absolute;
+    bottom: 100%; /* zeigt die Liste oberhalb vom Button */
+    left: 0;
+    background: white;
+    border: 1px solid #ccc;
+    width: 150px;
+    z-index: 10;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    margin-bottom: 6px;
+  }
+
+  .item {
+    padding: 8px;
+    width: 100%;
+    text-align: center;
+    cursor: pointer;
+  }
+
+  .item:hover {
+    background: #eee;
+  }
+
+  .active {
+    font-weight: bold;
+    background: #ddd;
   }
 
 </style>

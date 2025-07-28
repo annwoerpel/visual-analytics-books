@@ -67,7 +67,7 @@
         margin-right: 0.3%;
         margin-top: 0.3%;
         padding: 0.3em;
-        border-radius: 12px;
+        border-radius: 8px;
     }
     .container {
         display: flex;

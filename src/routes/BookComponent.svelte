@@ -22,10 +22,9 @@
     <!-- Front -->
     <div class="flip-front absolute w-full h-full backface-hidden">
       <img
-        src={`/thumbnails/${book.isbn13}.jpeg`}
+        src={book.thumbnail}
         alt={`Cover of ${book.title}`}
         class="thumbnail"
-        on:error={(e) => e.target.src = '/thumbnails/image_not_found.png'}
       />
 
     </div>

@@ -11,8 +11,6 @@
   type="button"
   class="group perspective w-full h-full relative"
   on:click={() => onOpenSidebar(book)}
-  on:mouseenter={handleMouseEnter}
-  on:mouseleave={handleMouseLeave}
 >
   <!-- Flip Card -->
   <div

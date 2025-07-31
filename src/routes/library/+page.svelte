@@ -198,7 +198,13 @@
 
 </script>
 
-<Navbar/>
+<Navbar>
+    <div slot="slider">
+        <div class="slider">
+        </div>
+    </div>
+</Navbar>
+
 
 <div class="flex mt-5 ml-3 mr-3 mb-5">
     <!-- Search and Filter Sidebar -->
@@ -316,6 +322,13 @@
         box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
         padding: 1rem;
         margin: 1rem auto;
+    }
+
+    
+    .slider {
+        width: 35vw;
+        margin: 0 auto;
+        text-align: center;
     }
 
 </style>

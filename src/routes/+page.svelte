@@ -136,35 +136,52 @@
 
   use([ScatterChart, RadarChart, GridComponent, CanvasRenderer, TitleComponent, ToolboxComponent, TooltipComponent, LegendComponent, LineChart, UniversalTransition]);
 
-  $: scatterData = top_10_books.map((book, i) => ({
-    value: [parseInt(book.published_year), i + 1],
-    symbol: `image://${book.thumbnail}`
-  }));
+  $: scatterData = top_10_books.map((book) => ({
+      value: [parseInt(book.published_year), 3],
+      symbol: `image://${book.thumbnail}`
+    }));
 
-  // Scatter Chart Konfiguration
+  $: top_10_years = top_10_books
+    .map(b => parseInt(b.published_year))
+    .filter(y => !isNaN(y));
+
+  $: minYear = Math.min(...top_10_years);
+  $: maxYear = Math.max(...top_10_years);
+
+  const xRange = end - start + 1;
+  const maxLabels = 10;
+  const interval = Math.ceil(xRange / maxLabels);
+
   $: scatterChartOptions = {
+    grid: {
+      bottom: 0,
+      containLabel: true
+    },
     tooltip: {
       trigger: 'axis',
       axisPointer: { type: 'shadow' }
     },
     xAxis: {
-      min: Math.max(start - 1, minPublishedYear),
-      max: Math.min(end + 1, maxPublishedYear),
-      interval: 1,
+      min: minYear,
+      max: maxYear,
+      interval: Math.ceil((maxYear - minYear + 1) / 10),
       axisLabel: { formatter: v => v }
     },
     yAxis: {
       min: 1,
-      max: 10,
+      max: 5,
       inverse: true,
-      interval: 1
+      interval: 1,
+      show: false
     },
     series: [{
       type: 'scatter',
       data: scatterData,
-      symbolSize: () => [60, 90]
+      symbolSize: () => [68, 110],
+      symbolOffset: [0, 0]
     }]
   };
+
 
   // Stacked Area Chart Konfiguration
   $: stackedAreaChartOptions = {
@@ -364,7 +381,7 @@
   </main>
 
   <div class="graph">
-    <Chart {init} options={scatterChartOptions} />
+    <Chart class="-mt-10" {init} options={scatterChartOptions} />
   </div>
 
 </div>
@@ -388,8 +405,8 @@
 
 
   .graph {
-    width: 70vw;
-    height: 50vh;
+    width: 80vw;
+    height: 28vh;
     background-color: #fffefc;
     border-radius: 8px;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);

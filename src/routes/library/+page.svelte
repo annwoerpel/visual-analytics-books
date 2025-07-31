@@ -3,6 +3,8 @@
 
     import BookComponent from "../BookComponent.svelte";
     import BookSidebar from "../BookSidebar.svelte";
+    import Navbar from "../Navbar.svelte";
+
     import { Tabs, TabItem, Checkbox, Search, Tooltip } from "flowbite-svelte";
 
     import { Chart } from 'svelte-echarts'
@@ -195,6 +197,8 @@
     };
 
 </script>
+
+<Navbar/>
 
 <div class="flex mt-5 ml-3 mr-3 mb-5">
     <!-- Search and Filter Sidebar -->

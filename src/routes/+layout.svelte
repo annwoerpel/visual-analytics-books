@@ -1,4 +1,3 @@
-
 <script>
     import "../app.css";
     import Navbar from "./Navbar.svelte";
@@ -13,8 +12,6 @@
 <svelte:head>
     <title>Book Analysis Dashboard</title> 
 </svelte:head>
-
-<Navbar {books} bind:searchValue bind:selectedGenre />
 
 <div class="bg-img"></div>
 

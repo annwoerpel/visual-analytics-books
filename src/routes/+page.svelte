@@ -12,7 +12,7 @@
   import BookComponent from './BookComponent.svelte';
   import BookSidebar from './BookSidebar.svelte';
   import ColorBlob from './ColorBlob.svelte';
-  import { reverse } from 'd3-array';
+  import Navbar from "./Navbar.svelte";
 
   export let data;
   let books = data.books ?? [];
@@ -300,9 +300,43 @@
   };
 </script>
 
+<Navbar>
+  <div slot="slider">
+    <div class="slider">
+      <DoubleRangeSlider 
+        bind:start
+        bind:end
+        {minPublishedYear}
+        {maxPublishedYear}
+      />
+      <div class="labels">
+        <div class="label">{start}</div>
+        <div class="label">{end}</div>
+      </div>
+    </div>
+  </div>
+</Navbar>
 
-<div class="flex flex-row justify-center items-start gap-3 px-4">
+<div class="flex flex-row justify-center items-start gap-3 px-4 mt-12">
   <main>
+
+    <div class="dropdown" bind:this={dropdownRef}>
+      {#if showDropdown}
+        <div class="dropdown-list down">
+          {#each ["All Genres", ...top5GenresOverall] as genre}
+            <button
+              class="item {selectedGenre === genre ? 'active' : ''}"
+              on:click={() => selectGenre(genre)}>
+              {genre}
+            </button>
+          {/each}
+        </div>
+      {/if}
+
+      <button on:click={() => showDropdown = !showDropdown}>
+        {selectedGenre}
+      </button>
+    </div>
 
     <h1>Top 10 Books</h1>
     <div class="grid grid-cols-5 gap-1 items-center p-4">
@@ -343,42 +377,7 @@
   <Chart {init} options={bumpChartOptions} />
 </div>
 
-<Banner dismissable={false} type="bottom" class="bg-[#fffefc] h-14">
-  <div class="container">
 
-    <div class="slider">
-      <DoubleRangeSlider 
-        bind:start
-        bind:end
-        {minPublishedYear}
-        {maxPublishedYear}
-      />
-      <div class="labels">
-        <div class="label">{start}</div>
-        <div class="label">{end}</div>
-      </div>
-    </div>
-
-    <div class="dropdown" bind:this={dropdownRef}>
-      {#if showDropdown}
-        <div class="dropdown-list up">
-          {#each ["All Genres", ...top5GenresOverall] as genre}
-            <button
-              class="item {selectedGenre === genre ? 'active' : ''}"
-              on:click={() => selectGenre(genre)}>
-              {genre}
-            </button>
-          {/each}
-        </div>
-      {/if}
-
-      <button on:click={() => showDropdown = !showDropdown}>
-        {selectedGenre}
-      </button>
-    </div>
-
-  </div>
-</Banner>
 
 <BookSidebar book={selectedBook} onClose={closeSidebar} />
 
@@ -387,13 +386,6 @@
   @font-face { font-family:Coolvetica Rg; src: url('/fonts/Coolvetica Rg.otf'); }
   @font-face { font-family:Coolvetica Rg Cond; src: url('/fonts/Coolvetica Rg Cond.otf'); }
 
-  .container {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 12px;
-    gap: 24px;
-  }
 
   .graph {
     width: 70vw;
@@ -416,7 +408,7 @@
   }
 
   .slider {
-    width: 50vw;
+    width: 35vw;
     margin: 0 auto;
     text-align: center;
   }
@@ -458,9 +450,9 @@
     background-color: rgb(216, 216, 216);
   }
 
-  .dropdown-list.up {
+  .dropdown-list.down {
     position: absolute;
-    bottom: 100%; /* zeigt die Liste oberhalb vom Button */
+    top: 100%;
     left: 0;
     background: white;
     border: 1px solid #ccc;

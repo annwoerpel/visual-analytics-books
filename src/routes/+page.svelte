@@ -1,4 +1,6 @@
 <script>
+  import WordCloud from "./WordCloud.svelte";
+
   import { Chart } from 'svelte-echarts'
   import { init, use } from 'echarts/core'
   import { ScatterChart, RadarChart, LineChart } from 'echarts/charts'
@@ -54,6 +56,12 @@
   $: top_10_authors = Array.from(new Set(
     top_10_books.map(book => book.authors)
   )).slice(0, 10);
+  
+  $: wordCloudText = top_10_authors
+    .map((author, index) =>
+      Array(10 - index).fill(author.replace(/\s/g, "_")).join(" ")
+    )
+    .join(" ");
 
   // Top 5 Cover-Farben
   $: top_10_colors = Array.from(new Set(
@@ -315,6 +323,7 @@
     },
     series: bumpSeriesList
   };
+
 </script>
 
 <Navbar>
@@ -354,8 +363,8 @@
         {selectedGenre}
       </button>
     </div>
-
-    <h1>Top 10 Books</h1>
+  
+    <h1>Top Books</h1>
     <div class="grid grid-cols-5 gap-1 items-center p-4">
       {#each top_10_books as book, i}
         <div class="w-full h-32">
@@ -364,14 +373,14 @@
       {/each}
     </div>
 
-    <h1>Top 10 Authors</h1>
+    <h1>Top Authors</h1>
       <div class="p-4">
-        {#each top_10_authors as author}
-          <p>{author}</p>
-        {/each}
+        <cloud>
+          <WordCloud text={wordCloudText} key={wordCloudText} />
+        </cloud>
       </div>
 
-    <h1>Top 5 Cover Colors</h1>
+    <h1>Top Cover Colors</h1>
     <div class="grid grid-cols-5 gap-1 items-center p-4">
       {#each top_10_colors as color}
         <ColorBlob color={color} size={60} />
@@ -394,11 +403,16 @@
   <Chart {init} options={bumpChartOptions} />
 </div>
 
-
-
 <BookSidebar book={selectedBook} onClose={closeSidebar} />
 
 <style>
+
+  cloud {
+    display: flex;
+    justify-content: center;
+  }
+
+
   @font-face { font-family:Milkyway; src: url('/fonts/Milkyway.ttf'); }
   @font-face { font-family:Coolvetica Rg; src: url('/fonts/Coolvetica Rg.otf'); }
   @font-face { font-family:Coolvetica Rg Cond; src: url('/fonts/Coolvetica Rg Cond.otf'); }

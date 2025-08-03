@@ -18,6 +18,8 @@
 		"@tailwindcss/typography": "^0.5.15",
 		"@tailwindcss/vite": "^4.0.0",
 		"@types/colorthief": "^2.6.0",
+		"@types/d3-array": "^3.2.1",
+		"@types/d3-cloud": "^1.2.9",
 		"echarts": "^5.6.0",
 		"flowbite": "^3.1.2",
 		"flowbite-svelte": "^1.8.3",
@@ -33,9 +35,11 @@
 		"apexcharts": "^5.2.0",
 		"colorthief": "^2.6.0",
 		"d3-array": "^3.2.4",
+		"d3-cloud": "^1.2.7",
 		"d3-scale": "^4.0.2",
 		"papaparse": "^5.5.3",
 		"svelte-apexcharts": "^1.0.2",
+		"svelte-d3-cloud": "^0.0.2",
 		"tailwindcss": "^4.1.11",
 		"yootils": "^0.3.1"
 	}

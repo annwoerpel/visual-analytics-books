@@ -265,7 +265,7 @@
       return { genre, count };
     })
     .sort((a, b) => b.count - a.count)
-    .slice(0, 5)
+    .slice(0, 10)
     .map(g => g.genre);
 
   $: genreRanks = computeGenreRanksForTopGenres(top5GenresOverall, bumpYears);

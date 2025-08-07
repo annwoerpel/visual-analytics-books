@@ -14,9 +14,10 @@
 >
   <!-- Flip Card -->
   <div
-    class="flip-card transition duration-500 transform w-full h-full relative"
+    class="flip-card transition duration-300 transform group-hover:scale-[1.05] w-full h-full relative group-hover:shadow-lg"
     class:group-hover:rotate-y-180={index != 100}
   >
+
     <!-- Front -->
     <div class="flip-front absolute w-full h-full backface-hidden">
       <img
@@ -33,13 +34,19 @@
   </div>
 
 </button>
-<Tooltip>
+<Tooltip class="bg-[#fffefc] text-[#3a4d3b] px-3 py-2 rounded shadow-lg ease-in-out border border-[#a3c4a5]"
+          style="font-family: 'Coolvetica Rg', Arial; letter-spacing: 1.2px; font-size: 0.8em;"
+          animation="duration-200">
       {book.title}<br />
-      <span>{book.authors}</span>
+      <span style="color: #a3c4a5;">{book.authors}</span>
 </Tooltip>
 
 
 <style>
+  @font-face { font-family:Milkyway; src: url('/fonts/Milkyway.ttf'); }
+  @font-face { font-family:Coolvetica Rg; src: url('/fonts/Coolvetica Rg.otf'); }
+  @font-face { font-family:Coolvetica Rg Cond; src: url('/fonts/Coolvetica Rg Cond.otf'); }
+
   .perspective {
     perspective: 1000px;
   }

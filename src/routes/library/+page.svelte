@@ -4,14 +4,16 @@
     import BookComponent from "../BookComponent.svelte";
     import BookSidebar from "../BookSidebar.svelte";
     import Navbar from "../Navbar.svelte";
+    import { onMount, onDestroy } from 'svelte';
+    import { browser } from '$app/environment';
 
     import { Tabs, TabItem, Checkbox, Search, Tooltip } from "flowbite-svelte";
 
-    import { Chart } from 'svelte-echarts'
-    import { init, use } from 'echarts/core'
-    import { RadarChart } from 'echarts/charts'
-    import { GridComponent, TitleComponent, LegendComponent } from 'echarts/components'
-    import { CanvasRenderer } from 'echarts/renderers'
+    import { Chart } from 'svelte-echarts';
+    import { init, use } from 'echarts/core';
+    import { RadarChart, SunburstChart } from 'echarts/charts';
+    import { GridComponent, TitleComponent, LegendComponent, VisualMapComponent, ToolboxComponent, TooltipComponent} from 'echarts/components';
+    import { CanvasRenderer } from 'echarts/renderers';
 
     let books = data.books ?? [];
     let selectedBook = null;
@@ -50,7 +52,6 @@
     // Local search, genre and page count filter for UI controls
     let localSearch = "";
     let localGenreArray = [];
-    import { onMount } from "svelte";
     let maxPagesFilter = 0;
 
     // Ermittle die maximal vorkommende Seitenzahl für den Slider
@@ -80,7 +81,7 @@
         return matchesSearch && matchesGenre && matchesPages;
     });
 
-    use([RadarChart, GridComponent, CanvasRenderer, TitleComponent, LegendComponent]);
+    use([RadarChart, GridComponent, CanvasRenderer, TitleComponent, LegendComponent, SunburstChart, ToolboxComponent, TooltipComponent]);
 
     $: userGenreCounts = {};
     $: books.forEach(b => {
@@ -108,8 +109,8 @@
 
             // Mische bevorzugte und andere Bücher
             const combined = [
-                ...favored.sort(() => 0.5 - Math.random()).slice(0, 15),
-                ...others.sort(() => 0.5 - Math.random()).slice(0, 15)
+                ...favored.sort(() => 0.5 - Math.random()).slice(0, 150),
+                ...others.sort(() => 0.5 - Math.random()).slice(0, 150)
             ];
 
             // Extrahiere isbn13
@@ -122,8 +123,8 @@
         max: 5  // Bewertungen gehen meist von 0 bis 5
     }));
 
-    $: radarAllTaste = genres.map(g => parseFloat(allGenreRatings[g]?.toFixed(2)) || 0);
-    $: radarUserTaste = genres.map(g => parseFloat(userGenreRatings[g]?.toFixed(2)) || 0);
+    $: radarAllTaste = genres.map(g => parseFloat(allGenreRatings[g]?.toFixed(2)) || 3);
+    $: radarUserTaste = genres.map(g => parseFloat(userGenreRatings[g]?.toFixed(2)) || 3);
 
 
     $: allGenreRatings = {};
@@ -154,13 +155,71 @@
 
 
     $: option_radar = {
-        title: { text: 'Genre Taste Comparison' },
-        legend: { 
+        legend: {
             show: true,
-            bottom: 0,
-            data: ['Everyone', 'My Taste'] },
+            left: 'center',
+            itemGap: 50, // Abstand zwischen Einträgen
+            textStyle: {
+                fontFamily: 'Coolvetica Rg, Arial',
+                fontSize: '0.8em',
+                color: '#3a4d3b',
+                letterSpacing: '1.2px'
+            },
+            data: ['Average Taste', 'My Taste']
+        },
         radar: {
-            indicator: radarIndicators
+            indicator: radarIndicators,
+            center: ['50%', '55%'], // weiter unten
+            radius: '70%',          // etwas kleiner
+            name: {
+                formatter: function (name) {
+                const maxLineLength = 10;
+                if (name.length > maxLineLength) {
+                    const words = name.split(' ');
+                    let lines = '';
+                    let currentLine = '';
+                    words.forEach(word => {
+                    if ((currentLine + word).length > maxLineLength) {
+                        lines += currentLine + '\n';
+                        currentLine = word + ' ';
+                    } else {
+                        currentLine += word + ' ';
+                    }
+                    });
+                    lines += currentLine.trim();
+                    return lines;
+                }
+                return name;
+                },
+                textStyle: {
+                fontSize: 11,
+                color: '#3a4d3b',
+                fontFamily: 'Coolvetica Rg, Arial'
+                }
+            }
+        },
+
+        tooltip: {
+            position: function (point, params, dom, rect, size) {
+                return ['80%', '5%']; // [left, top] 
+            },
+            trigger: 'item',
+            textStyle: {
+                fontFamily: 'Coolvetica Rg, Arial',
+                fontSize: 13,
+                color: '#3a4d3b'
+            },
+            formatter: function (params) {
+                const param_name = params.name;
+                const values = params.value;
+                let tooltipText = `<strong>${param_name}</strong><br/>`;
+
+                radarIndicators.forEach((indicator, index) => {
+                tooltipText += `${indicator.name}: ⭐ ${values[index]}<br/>`;
+                });
+
+                return tooltipText;
+            }
         },
         series: [{
             name: 'Genre Preferences',
@@ -168,7 +227,7 @@
             data: [
                 {
                     value: radarAllTaste,
-                    name: 'Everyone',
+                    name: 'Average Taste',
                     itemStyle: {
                         color: '#88C0D0'  // Farbe der Fläche
                     },
@@ -196,67 +255,184 @@
         }]
     };
 
+    // sunburst
+    $: topGenresLibrary = Object.keys(userGenreCounts);
+
+    $: sunburstData = genres.map(genre => {
+        const globalCount = genreCounts[genre] || 0;
+        const libraryCount = userGenreCounts[genre];
+
+        // Wenn das Genre nicht in der Library vorkommt → keine mittlere Ebene
+        if (!libraryCount) {
+            return {
+                name: genre,
+                value: globalCount
+            };
+        }
+
+        const booksInGenre = books.filter(b =>
+            myLibrary.includes(b.isbn13) &&
+            b.categories?.split(',')[0]?.trim() === genre
+        );
+
+        return {
+            name: genre,                // Innerer Ring
+            value: globalCount,         // Globaler Count
+
+            children: [{
+                name: genre,            // Zweiter Ring – Library Genre
+                value: libraryCount
+            }]
+        };
+    });
+
+    $: option_sunburst = {
+        title: { text: 'All vs. Read Books' },
+        series: {
+            type: 'sunburst',
+            radius: [0, '95%'],
+            data: sunburstData,
+            label: { rotate: 'radial' },
+            levels: [
+                {},
+                {
+                    r0: '10%',
+                    r: '45%',
+                    label: { fontSize: 6 },
+                },
+                {
+                    r0: '45%',
+                    r: '60%',
+                    label: {
+                        fontSize: 10,
+                        position: 'outside',
+                        padding: 3,
+                        silent: false
+                    }
+                }
+            ],
+        },
+        visualMap: {
+            type: 'continuous',
+            min: 0,
+            max: Math.max(1, ...books.map(b => parseInt(b.num_pages) || 0)),
+            inRange: {
+                color: ['#2F93C8', '#AEC48F', '#FFDB5C', '#F98862']
+            }
+        }
+    };
+
+    // genre dropdown
+    let dropdownOpen = false;
+    let dropdownRef;
+
+    function toggleDropdown() {
+        dropdownOpen = !dropdownOpen;
+    }
+
+    function closeDropdown() {
+        dropdownOpen = false;
+    }
+
+    function handleClickOutside(event) {
+        if (dropdownRef && !dropdownRef.contains(event.target)) {
+            closeDropdown();
+        }
+    }
+
+    onMount(() => {
+        if (browser) {
+            window.addEventListener('click', handleClickOutside);
+        }
+
+        return () => {
+            if (browser) {
+                window.removeEventListener('click', handleClickOutside);
+            }
+        };
+    });
+
 </script>
 
 <Navbar>
     <div slot="slider">
         <div class="slider">
+            <Tooltip class="bg-[#fffefc] text-[#a3c4a5] px-3 py-2 rounded shadow-lg ease-in-out border border-[#a3c4a5]"
+                        style="font-family: 'Coolvetica Rg', Arial; letter-spacing: 1.2px; font-size: 0.8em;"
+                        animation="duration-200">
+                Search by title, author or ISBN</Tooltip>
+            <Search
+                size="sm"
+                bind:value={localSearch}
+                placeholder="Search books"
+                inputClass="w-full focus:ring-[#a3c4a5] focus:border-[#a3c4a5] bg-[#fffefc] placeholder-gray-400"
+                style="font-family: 'Coolvetica Rg', Arial; letter-spacing: 1.5px; font-size: 0.8em;"
+            >
+            </Search>
         </div>
     </div>
 </Navbar>
 
+<div class="flex px-4 mt-16">
 
-<div class="flex mt-5 ml-3 mr-3 mb-5">
-    <!-- Search and Filter Sidebar -->
-    <aside class="w-64 min-h-[600px] bg-[#f7f7f4] rounded-xl shadow-md p-5 mr-8 flex flex-col items-start">
-        <Search
-            size="sm"
-            bind:value={localSearch}
-            placeholder="Search books"
-            inputClass="w-full focus:ring-[#a3c4a5] focus:border-[#a3c4a5] bg-[#fffefc] placeholder-gray-400"
-            style="font-family: 'Coolvetica Rg', Arial; letter-spacing: 1.5px; font-size: 0.8em;"
-        >
-        </Search>
-        <Tooltip>Search by title, author or ISBN</Tooltip>
-        <div class="w-full mt-3">
-            <div class="mb-2 mt-3" style="font-family: Coolvetica Rg Cond, Arial;
-                                            letter-spacing: 2px;
-                                            font-size: 1.2em;
-                                            font-weight: normal;
-                                            margin: 0;
-                                            color: rgb(0, 0, 0);"
-            >Genres</div>
-            {#each genres as genre}
-                <label class="flex items-center mb-2 mt-2" style="font-family: 'Coolvetica Rg', Arial; letter-spacing: 1.5px; font-size: 0.8em;">
-                    <input
-                        type="checkbox"
-                        class="mr-2 accent-[#a3c4a5]"
-                        value={genre}
-                        checked={localGenreArray && localGenreArray.includes(genre)}
-                        on:change={() => toggleGenre(genre)}
-                    />
-                    {genre}
-                </label>
-            {/each}
+    <aside class="w-100 min-h-[500px] bg-[#f7f7f4] rounded-lg shadow-md p-5 mr-4 flex flex-col items-start">
+        <div class="w-full h-full mb-10">
+            <Chart {init} options={option_radar} />
         </div>
-        <div class="w-full mt-6">
-            <div class="mb-2" style="font-family: Coolvetica Rg Cond, Arial; letter-spacing: 2px; font-size: 1.1em;">Max number of pages</div>
-            <input type="range" min="0" max={maxPages} step="10" bind:value={maxPagesFilter} class="w-full accent-[#a3c4a5]" />
-            <div class="text-xs mt-1 mb-2" style="font-family: 'Coolvetica Rg', Arial;">{maxPagesFilter} pages or less</div>
+
+        <div class="w-full h-full">
+            <Chart {init} options={option_sunburst} />
         </div>
     </aside>
-    <!-- Main Content -->
+
     <div class="flex-1">
-        <Tabs>
+        <Tabs tabStyle="pill">
+
+            <!-- Filter -->
+            <div class="w-full flex flex-col md:flex-row items-start gap-6 px-2 pt-2 bg-[#f7f7f4] rounded-lg shadow-md">
+                <!-- Genre Dropdown -->
+                <div class="w-full md:w-1/2 dropdown-container relative" bind:this={dropdownRef}>
+                    <button
+                        class="w-full bg-[#fffefc] border border-[#a3c4a5] rounded-lg px-4 py-2 text-left"
+                        on:click={toggleDropdown}
+                        style="font-family: 'Coolvetica Rg Cond', Arial; letter-spacing: 1px; font-size: 0.9em;"
+                        >
+                        {localGenreArray.length > 0 ? localGenreArray.join(', ') : 'Filter Genres'}
+                    </button>
+                    {#if dropdownOpen}
+                    <div class="absolute z-10 mt-2 w-full bg-white border border-[#a3c4a5] rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                        {#each genres as genre}
+                        <label class="flex items-center px-4 py-2 hover:bg-[#f0f0f0]" style="font-family: 'Coolvetica Rg', Arial; letter-spacing: 1.5px; font-size: 0.8em;">
+                            <input
+                            type="checkbox"
+                            class="mr-2 accent-[#a3c4a5]"
+                            value={genre}
+                            checked={localGenreArray && localGenreArray.includes(genre)}
+                            on:change={() => toggleGenre(genre)}
+                            />
+                            {genre}
+                        </label>
+                        {/each}
+                    </div>
+                    {/if}
+                </div>
+
+                <!-- Seitenzahl-Filter -->
+                <div class="w-full md:w-1/2">
+                    <div class="mb-0" style="font-family: Coolvetica Rg Cond, Arial; letter-spacing: 1px; font-size: 0.9em;">{maxPagesFilter} pages or less</div>
+                    <input type="range" min="0" max={maxPages} step="10" bind:value={maxPagesFilter} class="w-full accent-[#a3c4a5]" />
+                </div>
+            </div>
+
             <TabItem
                 title="All Books"
                 open
                 activeClass="bg-[#a3c4a5]/90 text-white min-w-[120px] h-[60px] flex flex-col items-center justify-center rounded-lg"
-                inactiveClass="bg-[#fffefc] text-[#3a4d3b] hover:text-white hover:bg-[#a3c4a5] min-w-[120px] h-[60px] flex flex-col items-center justify-center rounded-lg"
+                inactiveClass="bg-[#fffefc] text-[#3a4d3b] hover:text-white hover:bg-[#a3c4a5] min-w-[120px] h-[60px] flex flex-col items-center justify-center rounded-lg transition-colors duration-200 ease-in-out"
                 style="font-family: 'Coolvetica Rg', Arial;"
             >
                 <div class="scrollable-tab-content">
-                    <div class="grid grid-cols-10 gap-1 items-center p-4">
+                    <div class="grid grid-cols-8 gap-2 items-center p-2">
                         {#each localFilteredBooks.slice(0, 100) as book}
                             <div class="w-full h-35">
                                 <BookComponent {book} index={100} onOpenSidebar={openSidebar} />
@@ -269,11 +445,11 @@
             <TabItem
                 title="My Books"
                 activeClass="bg-[#a3c4a5]/90 text-white min-w-[120px] h-[60px] flex flex-col items-center justify-center rounded-lg"
-                inactiveClass="bg-[#fffefc] text-[#3a4d3b] hover:text-white hover:bg-[#a3c4a5] min-w-[120px] h-[60px] flex flex-col items-center justify-center rounded-lg"
+                inactiveClass="bg-[#fffefc] text-[#3a4d3b] hover:text-white hover:bg-[#a3c4a5] min-w-[120px] h-[60px] flex flex-col items-center justify-center rounded-lg transition-colors duration-200 ease-in-out"
                 style="font-family: 'Coolvetica Rg', Arial;"
             >
                 <div class="scrollable-tab-content">
-                    <div class="grid grid-cols-10 gap-1 items-center p-4">
+                    <div class="grid grid-cols-8 gap-1 items-center p-4">
                         {#each localFilteredBooks.filter(book => myLibrary.includes(book.isbn13)) as book}
                             <div class="w-full h-35">
                                 <BookComponent {book} index={100} onOpenSidebar={openSidebar} />
@@ -288,12 +464,31 @@
                     {/if}
                 </div>
             </TabItem>
+
+            <TabItem
+                title="Recommendations"
+                activeClass="bg-[#a3c4a5]/90 text-white min-w-[120px] h-[60px] flex flex-col items-center justify-center rounded-lg"
+                inactiveClass="bg-[#fffefc] text-[#3a4d3b] hover:text-white hover:bg-[#a3c4a5] min-w-[120px] h-[60px] flex flex-col items-center justify-center rounded-lg transition-colors duration-200 ease-in-out"
+                style="font-family: 'Coolvetica Rg', Arial;"
+            >
+                <div class="scrollable-tab-content">
+                    <div class="grid grid-cols-8 gap-1 items-center p-4">
+                        {#each localFilteredBooks.filter(book => myLibrary.includes(book.isbn13)) as book}
+                            <div class="w-full h-35">
+                                <BookComponent {book} index={100} onOpenSidebar={openSidebar} />
+                            </div>
+                        {/each}
+                    </div>
+                    {#if localFilteredBooks.filter(book => myLibrary.includes(book.isbn13)).length === 0}
+                        <p class="text-sm tracking-wide text-center mt-8 text-gray-400"
+                            style="font-family: 'Coolvetica Rg', Arial;">
+                            Recommend top 10 books of all time
+                        </p>
+                    {/if}
+                </div>
+            </TabItem>
         </Tabs>
     </div>
-</div>
-
-<div class="radar-graph">
-    <Chart {init} options={option_radar} />
 </div>
 
 <BookSidebar
@@ -309,21 +504,10 @@
     @font-face { font-family:Coolvetica Rg Cond; src: url('/fonts/Coolvetica Rg Cond.otf'); }
 
     .scrollable-tab-content {
-        height: 550px;
+        height: 560px;
         overflow-y: auto;
         background-color: #fffefc;
     }
-
-    .radar-graph {
-        width: 70vw;
-        height: 70vh;
-        background-color: #fffefc;
-        border-radius: 8px;
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-        padding: 1rem;
-        margin: 1rem auto;
-    }
-
     
     .slider {
         width: 35vw;

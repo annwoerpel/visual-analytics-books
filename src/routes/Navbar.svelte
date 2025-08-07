@@ -11,7 +11,9 @@
         margin-right: 0.1%;
         margin-top: 0.1%;
         padding: 0.3em;
-        border-radius: 8px;">
+        border-radius: 8px;
+        max-width: 99.8%;
+        width: 99.8%;">
 
   <div class="flex justify-between items-center w-full space-x-55">
 
@@ -62,7 +64,13 @@
         text-align: center;
         margin: 0;
         color: #a3c4a5;
+        transition: color 0.2s ease-in-out;
     }
+
+    a:hover {
+      color: #3a4d3b; /* dunkleres Grün als #a3c4a5 */
+    }
+
     .active {
         color:#3a4d3b;
     }

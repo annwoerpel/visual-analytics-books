@@ -12,7 +12,7 @@
     import { Chart } from 'svelte-echarts';
     import { init, use } from 'echarts/core';
     import { RadarChart, SunburstChart } from 'echarts/charts';
-    import { GridComponent, TitleComponent, LegendComponent, VisualMapComponent, ToolboxComponent, TooltipComponent} from 'echarts/components';
+    import { GridComponent, TitleComponent, LegendComponent, ToolboxComponent, TooltipComponent} from 'echarts/components';
     import { CanvasRenderer } from 'echarts/renderers';
 
     let books = data.books ?? [];
@@ -28,7 +28,11 @@
     });
     $: genres = Object.entries(genreCounts)
         .sort((a, b) => b[1] - a[1])
-        .slice(0, 10)
+        .map(([genre]) => genre);
+
+    $: top_10_genres = Object.entries(genreCounts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0,10)
         .map(([genre]) => genre);
 
     function openSidebar(book) {
@@ -118,19 +122,18 @@
         }
     });
 
-    $: radarIndicators = genres.map(g => ({
+    $: radarIndicators = top_10_genres.map(g => ({
         name: g,
         max: 5  // Bewertungen gehen meist von 0 bis 5
     }));
 
-    $: radarAllTaste = genres.map(g => parseFloat(allGenreRatings[g]?.toFixed(2)) || 3);
-    $: radarUserTaste = genres.map(g => parseFloat(userGenreRatings[g]?.toFixed(2)) || 3);
-
+    $: radarAllTaste = top_10_genres.map(g => parseFloat(allGenreRatings[g]?.toFixed(2)) || 3);
+    $: radarUserTaste = top_10_genres.map(g => parseFloat(userGenreRatings[g]?.toFixed(2)) || 3);
 
     $: allGenreRatings = {};
     $: userGenreRatings = {};
 
-    $: genres.forEach(genre => {
+    $: top_10_genres.forEach(genre => {
     const genreBooksAll = books.filter(b =>
         b.categories?.split(',').map(c => c.trim()).includes(genre) &&
         !isNaN(parseFloat(b.average_rating))
@@ -258,68 +261,122 @@
     // sunburst
     $: topGenresLibrary = Object.keys(userGenreCounts);
 
-    $: sunburstData = genres.map(genre => {
-        const globalCount = genreCounts[genre] || 0;
-        const libraryCount = userGenreCounts[genre];
+    const categoryGroups = {
+        "Fiction": ['Fiction', 'Juvenile Fiction', 'Juvenile Nonfiction', 'Drama', 'Poetry', 'Humor', 'Comics & Graphic Novels'],
+        "Arts & Leisure Time": ['Literary Criticism', 'Computers', 'Cooking', 'Performing Arts', 'Travel', 'Art', 'Literary Collections'],
+        "Guides": ['Family & Relationships', 'Body, Mind & Spirit', 'Language Arts & Disciplines', 'Business & Economics', 'Health & Fitness', 'Self-Help'],
+        "Non-Fiction": ['Social Science', 'Religion', 'Science', 'History', 'Psychology', 'Philosophy', 'Political Science', 'Biography & Autobiography']
+    }
 
-        // Wenn das Genre nicht in der Library vorkommt → keine mittlere Ebene
-        if (!libraryCount) {
+    function getColorByLibraryCount(count, max) {
+        const alpha = max > 0 ? Math.min(1, count / max) : 0;
+        return `rgba(163, 190, 140, ${alpha.toFixed(2)})`; // #A3BE8C mit Transparenz
+    }
+
+    $: sunburstData = Object.entries(categoryGroups).map(([groupName, groupCategories]) => {
+        const groupLibraryCount = groupCategories.reduce((sum, category) => {
+            return sum + (userGenreCounts[category] || 0);
+        }, 0);
+
+        const children = groupCategories.map(category => {
+            const globalCount = genreCounts[category] || 0;
+            const libraryCount = userGenreCounts[category] || 0;
+
             return {
-                name: genre,
-                value: globalCount
+                name: category,
+                value: globalCount,
+                itemStyle: {
+                    color: getColorByLibraryCount(libraryCount, groupLibraryCount) // Relativ zur Gruppe
+                }
             };
-        }
-
-        const booksInGenre = books.filter(b =>
-            myLibrary.includes(b.isbn13) &&
-            b.categories?.split(',')[0]?.trim() === genre
-        );
+        });
 
         return {
-            name: genre,                // Innerer Ring
-            value: globalCount,         // Globaler Count
-
-            children: [{
-                name: genre,            // Zweiter Ring – Library Genre
-                value: libraryCount
-            }]
+            name: groupName,
+            children,
+            itemStyle: {
+                color: getColorByLibraryCount(groupLibraryCount, topGenresLibrary.length) // Relativ zur Gesamtzahl Gruppen
+            }
         };
     });
 
     $: option_sunburst = {
-        title: { text: 'All vs. Read Books' },
         series: {
             type: 'sunburst',
-            radius: [0, '95%'],
+            radius: [0, '100%'],
             data: sunburstData,
-            label: { rotate: 'radial' },
             levels: [
-                {},
-                {
-                    r0: '10%',
-                    r: '45%',
-                    label: { fontSize: 6 },
-                },
-                {
-                    r0: '45%',
-                    r: '60%',
-                    label: {
-                        fontSize: 10,
-                        position: 'outside',
-                        padding: 3,
-                        silent: false
-                    }
+            {},
+            {
+                r0: '0%',
+                r: '70%',
+                label: {
+                    fontSize: 11,
+                    color: '#3a4d3b',
+                    fontFamily: 'Coolvetica Rg, Arial',
+                    rotate: 'radial'
                 }
+            },
+            {
+                r0: '70%',
+                r: '90%',
+                label: {
+                fontSize: 10,
+                color: '#3a4d3b',
+                fontFamily: 'Coolvetica Rg, Arial',
+                align: 'left',
+                rotate: 0,
+                show: false
+                }
+            }
             ],
         },
-        visualMap: {
-            type: 'continuous',
-            min: 0,
-            max: Math.max(1, ...books.map(b => parseInt(b.num_pages) || 0)),
-            inRange: {
-                color: ['#2F93C8', '#AEC48F', '#FFDB5C', '#F98862']
+        tooltip: {
+            position: function (point, params, dom, rect, size) {
+                return ['80%', '5%']; // [left, top] 
+            },
+            trigger: 'item',
+            textStyle: {
+                fontFamily: 'Coolvetica Rg, Arial',
+                fontSize: 13,
+                color: '#3a4d3b'
+            },
+            formatter: function (params) {
+                const name = params.name;
+                const value = params.value;
+
+                let libraryCount = 0;
+                let max = 0;
+
+                if (params.data.children) {
+                // Innerer Ring (Gruppe)
+                const children = params.data.children;
+                libraryCount = children.reduce((sum, child) => sum + (userGenreCounts[child.name] || 0), 0);
+                max = children.reduce((sum, child) => sum + (genreCounts[child.name] || 0), 0);
+                } else {
+                // Äußerer Ring (Genre)
+                libraryCount = userGenreCounts[name] || 0;
+                max = genreCounts[name] || 0;
+                }
+
+                const percent = max > 0 ? Math.round((libraryCount / max) * 100) : 0;
+
+                // Balken-HTML
+                const bar = `
+                <div style="width: 100px; height: 8px; background: #eee; border-radius: 4px; overflow: hidden; margin-top: 4px;">
+                    <div style="width: ${percent}%; height: 100%; background: #A3BE8C;"></div>
+                </div>
+                `;
+
+                return `
+                <strong>${name}</strong><br/>
+                Total: ${value}<br/>
+                In Library: ${libraryCount} (${percent}%)<br/>
+                ${bar}
+                `;
             }
         }
+
     };
 
     // genre dropdown

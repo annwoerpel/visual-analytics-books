@@ -6,7 +6,7 @@
     $: routeId = $page.route.id;
 </script>
 
-<Banner dismissable={false} class="shadow-md h-14" style="background-color: #fffefc;
+<Banner dismissable={false} class="shadow-md h-14 z-50" style="background-color: #fffefc;
         margin-left: 0.1%;
         margin-right: 0.1%;
         margin-top: 0.1%;

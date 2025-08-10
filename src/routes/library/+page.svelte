@@ -97,7 +97,7 @@
             });
         }
     });
-
+    
     onMount(() => {
         maxPagesFilter = maxPages;
 
@@ -173,7 +173,7 @@
         radar: {
             indicator: radarIndicators,
             center: ['50%', '55%'], // weiter unten
-            radius: '70%',          // etwas kleiner
+            radius: '68%',          // etwas kleiner
             name: {
                 formatter: function (name) {
                 const maxLineLength = 10;
@@ -319,7 +319,7 @@
             },
             {
                 r0: '70%',
-                r: '90%',
+                r: '95%',
                 label: {
                 fontSize: 10,
                 color: '#3a4d3b',
@@ -433,7 +433,7 @@
 <div class="flex px-4 mt-16">
 
     <aside class="w-100 min-h-[500px] bg-[#f7f7f4] rounded-lg shadow-md p-5 mr-4 flex flex-col items-start">
-        <div class="w-full h-full mb-10">
+        <div class="w-full h-full mb-5">
             <Chart {init} options={option_radar} />
         </div>
 
@@ -489,7 +489,7 @@
                 style="font-family: 'Coolvetica Rg', Arial;"
             >
                 <div class="scrollable-tab-content">
-                    <div class="grid grid-cols-8 gap-2 items-center p-2">
+                    <div class="grid grid-cols-9 gap-2 items-center p-2">
                         {#each localFilteredBooks.slice(0, 100) as book}
                             <div class="w-full h-35">
                                 <BookComponent {book} index={100} onOpenSidebar={openSidebar} />
@@ -506,7 +506,7 @@
                 style="font-family: 'Coolvetica Rg', Arial;"
             >
                 <div class="scrollable-tab-content">
-                    <div class="grid grid-cols-8 gap-1 items-center p-4">
+                    <div class="grid grid-cols-9 gap-1 items-center p-4">
                         {#each localFilteredBooks.filter(book => myLibrary.includes(book.isbn13)) as book}
                             <div class="w-full h-35">
                                 <BookComponent {book} index={100} onOpenSidebar={openSidebar} />
@@ -529,7 +529,7 @@
                 style="font-family: 'Coolvetica Rg', Arial;"
             >
                 <div class="scrollable-tab-content">
-                    <div class="grid grid-cols-8 gap-1 items-center p-4">
+                    <div class="grid grid-cols-9 gap-1 items-center p-4">
                         {#each localFilteredBooks.filter(book => myLibrary.includes(book.isbn13)) as book}
                             <div class="w-full h-35">
                                 <BookComponent {book} index={100} onOpenSidebar={openSidebar} />

@@ -1,6 +1,14 @@
 <script lang="ts">
     export let book;
     export let inLibrary = false;
+    export let onRate = (book: any, rating: number) => {};
+    
+
+  $: if (book && inLibrary) {
+    onRate(book, userRating);
+  }
+
+    let userRating = 0;
     export let onClose = () => {};
     export let onToggleLibrary = (book: any, inLibrary: boolean) => {};
     import { fly } from 'svelte/transition';
@@ -8,7 +16,6 @@
 
     $: textColor = getTextColor(book?.dominant_color);
     
-
     function clickOutside(node: HTMLElement) {
         const handleClick = (event: MouseEvent) => {
         if (!node.contains(event.target as Node)) {
@@ -34,6 +41,7 @@
         const brightness = 0.299 * r + 0.587 * g + 0.114 * b;
         return brightness < 128 ? 'white' : 'black';
     }
+
 </script>
 
 
@@ -48,15 +56,34 @@
     <div style="color: {textColor};">
         <h2>{book.title}</h2>
         <h3>{book.subtitle}</h3>
-        <div style="margin-bottom: 1rem;">
+        <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
           <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+            <span style="font-family: 'Coolvetica Rg', Arial; font-size: 0.8rem;">
+              Add to my Library
+            </span>
             <input type="checkbox" bind:checked={inLibrary} on:change={() => onToggleLibrary(book, inLibrary)} />
-            <span style="font-family: 'Coolvetica Rg Cond', Arial;
-                          font-size: 1.2rem;
-                          letter-spacing: 1.3px;"
-            >Add to my Library</span>
           </label>
+
+      {#if inLibrary}
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <label for="rating-select" style="font-family: 'Coolvetica Rg', Arial; font-size: 0.8rem;">
+            My Rating
+          </label>
+          <select
+            id="rating-select"
+            bind:value={userRating}
+            style="font-family: 'Coolvetica Rg', Arial; font-size: 0.8rem; letter-spacing: 1.6px; padding: 0.1rem 1.6rem; border-radius: 4px; color:black; text-align: left; text-align-last: left; padding-left:5px;"
+          >
+            <option value={0}>-</option>
+            {#each Array.from({ length: 11 }, (_, i) => (i) * 0.5) as rating}
+              <option value={rating}>{rating}</option>
+            {/each}
+          </select>
+          <span class="-ml-3"><Rating id={book.title} total={1} size={35} rating={1} /></span>
         </div>
+      {/if}
+    </div>
+
         <p>
         {#key book.isbn13}
             <Rating id={book.title} total={5} size={35} rating={book.average_rating} />
@@ -64,6 +91,7 @@
         </p>
         <p><strong>Authors </strong> {book.authors}</p>
         <p><strong>Year </strong> {parseInt(book.published_year)}</p>
+        <p><strong>Genre </strong> {book.category_group}</p>
         <p><strong>Categories </strong> {book.categories}</p>
         <p><strong>Pages </strong> {parseInt(book.num_pages)}</p>
         <p><strong>ISBN </strong> {book.isbn13}</p>

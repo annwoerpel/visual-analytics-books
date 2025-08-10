@@ -16,6 +16,18 @@
   import ColorBlob from './ColorBlob.svelte';
   import Navbar from "./Navbar.svelte";
 
+   import GenreDropdown from './GenreDropdown.svelte';
+
+  let localGenreArray = [];
+
+  function toggleGenre(genre) {
+      if (localGenreArray.includes(genre)) {
+        localGenreArray = localGenreArray.filter(g => g !== genre);
+      } else {
+        localGenreArray = [...localGenreArray, genre];
+      }
+  }
+
   export let data;
   let books = data.books ?? [];
 
@@ -37,20 +49,24 @@
   }
 
   // Top 10 Bücher im aktuellen Intervall und im aktuellen Genre
-  $: top_10_books = books
-    .filter(book =>
-      book.average_rating &&
-      book.ratings_count &&
-      book.published_year >= start &&
-      book.published_year <= end &&
-      (selectedGenre === "All Genres" || book.categories?.split(',').map(c => c.trim()).includes(selectedGenre))
+$: top_10_books = books
+  .filter(book =>
+    book.average_rating &&
+    book.ratings_count &&
+    book.published_year >= start &&
+    book.published_year <= end &&
+    (
+      localGenreArray.length === 0 || // Alle Genres erlaubt
+      book.categories?.split(',').map(c => c.trim()).some(g => localGenreArray.includes(g))
     )
-    .sort((a, b) => {
-      const scoreA = a.average_rating * Math.log10(a.ratings_count + 1);
-      const scoreB = b.average_rating * Math.log10(b.ratings_count + 1);
-      return scoreB - scoreA;
-    })
-    .slice(0, 10);
+  )
+  .sort((a, b) => {
+    const scoreA = a.average_rating * Math.log10(a.ratings_count + 1);
+    const scoreB = b.average_rating * Math.log10(b.ratings_count + 1);
+    return scoreB - scoreA;
+  })
+  .slice(0, 10);
+
 
   // Top 10 Autoren
   $: top_10_authors = Array.from(new Set(
@@ -88,9 +104,8 @@
     }
   });
 
-  let selectedGenre = "All Genres"; // leeres Feld zeigt alle
+  let selectedGenre = "All Genres";
   let showDropdown = false;
-  // Referenz auf das Dropdown-Element
   let dropdownRef;
 
   function selectGenre(genre) {
@@ -144,10 +159,33 @@
 
   use([ScatterChart, RadarChart, GridComponent, CanvasRenderer, TitleComponent, ToolboxComponent, TooltipComponent, LegendComponent, LineChart, UniversalTransition]);
 
-  $: scatterData = top_10_books.map((book) => ({
-      value: [parseInt(book.published_year), 3],
-      symbol: `image://${book.thumbnail}`
-    }));
+  $: scatterData = [];
+
+  $: {
+    const yearGroups = {};
+
+    top_10_books.forEach((book, index) => {
+      const year = parseInt(book.published_year);
+      if (!yearGroups[year]) yearGroups[year] = [];
+      yearGroups[year].push({ book, rank: index + 1 });
+    });
+
+    scatterData = Object.entries(yearGroups).flatMap(([year, group]) => {
+      const center = parseInt(year);
+      const spread = 2; // Gesamtbreite der Streuung
+      const step = group.length > 1 ? spread / (group.length - 1) : 0;
+
+      return group.map((entry, i) => {
+        const offset = -spread / 2 + i * step;
+        return {
+          value: [center + offset, 3], // X gestreut, Y konstant
+          symbol: `image://${entry.book.thumbnail}`,
+          book: entry.book,
+          rank: entry.rank
+        };
+      });
+    });
+  }
 
   $: top_10_years = top_10_books
     .map(b => parseInt(b.published_year))
@@ -166,14 +204,27 @@
       containLabel: true
     },
     tooltip: {
-      trigger: 'axis',
-      axisPointer: { type: 'shadow' }
+      trigger: 'item',
+      formatter: function (params) {
+        const book = params.data.book;
+        const rank = params.data.rank;
+        const title = book.title;
+        const author = book.authors;
+        const year = book.published_year;
+
+        return `
+          <strong>#${rank}</strong><br/>
+          <em>${title}</em><br/>
+          by ${author}<br/>
+          Published: ${year}
+        `;
+      }
     },
     xAxis: {
-      min: minYear,
-      max: maxYear,
+      min: minYear - 1,
+      max: maxYear + 1,
       interval: Math.ceil((maxYear - minYear + 1) / 10),
-      axisLabel: { formatter: v => v }
+      axisLabel: { formatter: v => Math.floor(v) }
     },
     yAxis: {
       min: 1,
@@ -186,7 +237,10 @@
       type: 'scatter',
       data: scatterData,
       symbolSize: () => [68, 110],
-      symbolOffset: [0, 0]
+      symbolOffset: [0, 0],
+      itemStyle: {
+        opacity: 1 // volle Sichtbarkeit
+      }
     }]
   };
 
@@ -265,7 +319,15 @@
       return { genre, count };
     })
     .sort((a, b) => b.count - a.count)
-    .slice(0, 10)
+    .slice(0, 5)
+    .map(g => g.genre);
+
+  $: allGenres = Object.entries(genreYearCounts)
+    .map(([genre, yearData]) => {
+      const count = Object.values(yearData).reduce((sum, v) => sum + v, 0);
+      return { genre, count };
+    })
+    .sort((a, b) => b.count - a.count)
     .map(g => g.genre);
 
   $: genreRanks = computeGenreRanksForTopGenres(top5GenresOverall, bumpYears);
@@ -328,80 +390,69 @@
 
 <Navbar>
   <div slot="slider">
-    <div class="slider">
-      <DoubleRangeSlider 
-        bind:start
-        bind:end
-        {minPublishedYear}
-        {maxPublishedYear}
+    <div class="slider-container">
+      
+      <GenreDropdown
+        {allGenres}
+        selectedGenres={localGenreArray}
+        onToggleGenre={toggleGenre}
       />
-      <div class="labels">
-        <div class="label">{start}</div>
-        <div class="label">{end}</div>
+
+      <div class="slider">
+        <DoubleRangeSlider 
+          bind:start
+          bind:end
+          {minPublishedYear}
+          {maxPublishedYear}
+        />
+        <div class="labels">
+          <div class="label">{start}</div>
+          <div class="label">{end}</div>
+        </div>
       </div>
     </div>
   </div>
 </Navbar>
 
-<div class="flex flex-row justify-center items-start gap-3 px-4 mt-12">
-  <main>
-
-    <div class="dropdown" bind:this={dropdownRef}>
-      {#if showDropdown}
-        <div class="dropdown-list down">
-          {#each ["All Genres", ...top5GenresOverall] as genre}
-            <button
-              class="item {selectedGenre === genre ? 'active' : ''}"
-              on:click={() => selectGenre(genre)}>
-              {genre}
-            </button>
-          {/each}
-        </div>
-      {/if}
-
-      <button on:click={() => showDropdown = !showDropdown}>
-        {selectedGenre}
-      </button>
-    </div>
-  
-    <h1>Top Books</h1>
-    <div class="grid grid-cols-5 gap-1 items-center p-4">
-      {#each top_10_books as book, i}
-        <div class="w-full h-32">
-          <BookComponent {book} index={i} onOpenSidebar={openSidebar} />
-        </div>
-      {/each}
-    </div>
-
-    <h1>Top Authors</h1>
-      <div class="p-4">
+<div class="flex flex-row mt-12">
+  <wordcloud class="flex-1">
+      <div>
         <cloud>
           <WordCloud text={wordCloudText} key={wordCloudText} />
         </cloud>
       </div>
+  </wordcloud>
 
-    <h1>Top Cover Colors</h1>
-    <div class="grid grid-cols-5 gap-1 items-center p-4">
-      {#each top_10_colors as color}
-        <ColorBlob color={color} size={60} />
-      {/each}
-    </div>
-
-  </main>
-
-  <div class="graph">
-    <Chart class="-mt-10" {init} options={scatterChartOptions} />
+  <div class="scatter flex-2">
+    <Chart class="-mt-13" {init} options={scatterChartOptions} />
   </div>
 
+  <h1>Top Cover Colors</h1>
+  <div class="flex grid grid-cols-10 gap-1 items-center p-4">
+    {#each top_10_colors as color}
+      <ColorBlob color={color} size={60} />
+    {/each}
+  </div>
 </div>
 
-<div class="graph-2">
-  <Chart {init} options={stackedAreaChartOptions} />
+<div class="flex grid grid-cols-2 gap-1 items-center p-2 -mt-10">
+  <div class="graph">
+    <Chart {init} options={stackedAreaChartOptions} />
+  </div>
+
+  <div class="graph">
+    <Chart {init} options={bumpChartOptions} />
+  </div>
+
+  <div class="graph">
+    <Chart {init} options={stackedAreaChartOptions} />
+  </div>
+
+  <div class="graph">
+    <Chart {init} options={bumpChartOptions} />
+  </div>
 </div>
 
-<div class="graph-2">
-  <Chart {init} options={bumpChartOptions} />
-</div>
 
 <BookSidebar book={selectedBook} onClose={closeSidebar} />
 
@@ -412,52 +463,45 @@
     justify-content: center;
   }
 
-
   @font-face { font-family:Milkyway; src: url('/fonts/Milkyway.ttf'); }
   @font-face { font-family:Coolvetica Rg; src: url('/fonts/Coolvetica Rg.otf'); }
   @font-face { font-family:Coolvetica Rg Cond; src: url('/fonts/Coolvetica Rg Cond.otf'); }
 
-
-  .graph {
-    width: 80vw;
-    height: 28vh;
-    background-color: #fffefc;
-    border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-    margin: 0 auto;
-    margin-top: 20px;
+  .slider-container {
+    display: flex;
+    align-items: center;
+    gap: 1rem; /* Abstand zwischen Dropdown und Slider */
+    width: 35vw;
   }
 
-  .graph-2 {
-    width: 70vw;
-    height: 50vh;
+  .scatter {
+    height: 28vh;
+    min-width: 60%;
+  }
+
+  .graph {
+    width: 49vw;
+    height: 34vh;
     background-color: #fffefc;
     border-radius: 8px;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-    margin: 0 auto;
-    margin-top: 20px;
   }
 
   .slider {
-    width: 35vw;
+    width: 25vw;
     margin: 0 auto;
     text-align: center;
   }
 
-  main {
+  wordcloud {
     text-align: center;
-    padding: 1em;
-    width: 540px;
-    background-color: #fffefc;
-    border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-    margin-top: 20px;
+    max-width: 25%;
   }
 
   h1 {
     font-family: Coolvetica Rg Cond, Arial;
     letter-spacing: 2px;
-    font-size: 1.7em;
+    font-size: 10;
     font-weight: normal;
     text-align: center;
     margin: 0;
@@ -474,40 +518,5 @@
     float: right;
   }
 
-  .dropdown {
-    position: relative;
-    display: inline-block;
-    text-align: right;
-    background-color: rgb(216, 216, 216);
-  }
-
-  .dropdown-list.down {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    background: white;
-    border: 1px solid #ccc;
-    width: 150px;
-    z-index: 10;
-    border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-    margin-bottom: 6px;
-  }
-
-  .item {
-    padding: 8px;
-    width: 100%;
-    text-align: center;
-    cursor: pointer;
-  }
-
-  .item:hover {
-    background: #eee;
-  }
-
-  .active {
-    font-weight: bold;
-    background: #ddd;
-  }
 
 </style>

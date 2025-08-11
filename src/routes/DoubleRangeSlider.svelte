@@ -1,15 +1,18 @@
 <script>
   import { clamp } from 'yootils';
 
-  export let start = 1900;
-  export let end = 2025;
-  export let minYear = 1900;
-  export let maxYear = 2025;
+  export let start = 1876;
+  export let end = 2019;
+  export let minYear = 1876;
+  export let maxYear = 2019;
 
   let leftHandle;
   let rightHandle;
   let body;
   let slider;
+
+  let showStartTooltip = false;
+  let showEndTooltip = false;
 
   function yearToPercent(year) {
     return ((year - minYear) / (maxYear - minYear)) * 100;
@@ -20,54 +23,54 @@
   }
 
   function draggable(node) {
-		let x;
-		let y;
-		function handleMousedown(event) {
-			if (event.type === 'touchstart') {
-				event = event.touches[0];
-			}
-			x = event.clientX;
-			y = event.clientY;
-			node.dispatchEvent(new CustomEvent('dragstart', {
-				detail: { x, y }
-			}));
-			window.addEventListener('mousemove', handleMousemove);
-			window.addEventListener('mouseup', handleMouseup);
-			window.addEventListener('touchmove', handleMousemove);
-			window.addEventListener('touchend', handleMouseup);
-		}
-		function handleMousemove(event) {
-			if (event.type === 'touchmove') {
-				event = event.changedTouches[0];
-			}
-			const dx = event.clientX - x;
-			const dy = event.clientY - y;
-			x = event.clientX;
-			y = event.clientY;
-			node.dispatchEvent(new CustomEvent('dragmove', {
-				detail: { x, y, dx, dy }
-			}));
-		}
-		function handleMouseup(event) {
-			x = event.clientX;
-			y = event.clientY;
-			node.dispatchEvent(new CustomEvent('dragend', {
-				detail: { x, y }
-			}));
-			window.removeEventListener('mousemove', handleMousemove);
-			window.removeEventListener('mouseup', handleMouseup);
-			window.removeEventListener('touchmove', handleMousemove);
-			window.removeEventListener('touchend', handleMouseup);
-		}
-		node.addEventListener('mousedown', handleMousedown);
-		node.addEventListener('touchstart', handleMousedown);
-		return {
-			destroy() {
-				node.removeEventListener('mousedown', handleMousedown);
-				node.removeEventListener('touchstart', handleMousedown);
-			}
-		};
-	}
+    let x;
+    let y;
+    function handleMousedown(event) {
+      if (event.type === 'touchstart') {
+        event = event.touches[0];
+      }
+      x = event.clientX;
+      y = event.clientY;
+      node.dispatchEvent(new CustomEvent('dragstart', {
+        detail: { x, y }
+      }));
+      window.addEventListener('mousemove', handleMousemove);
+      window.addEventListener('mouseup', handleMouseup);
+      window.addEventListener('touchmove', handleMousemove);
+      window.addEventListener('touchend', handleMouseup);
+    }
+    function handleMousemove(event) {
+      if (event.type === 'touchmove') {
+        event = event.changedTouches[0];
+      }
+      const dx = event.clientX - x;
+      const dy = event.clientY - y;
+      x = event.clientX;
+      y = event.clientY;
+      node.dispatchEvent(new CustomEvent('dragmove', {
+        detail: { x, y, dx, dy }
+      }));
+    }
+    function handleMouseup(event) {
+      x = event.clientX;
+      y = event.clientY;
+      node.dispatchEvent(new CustomEvent('dragend', {
+        detail: { x, y }
+      }));
+      window.removeEventListener('mousemove', handleMousemove);
+      window.removeEventListener('mouseup', handleMouseup);
+      window.removeEventListener('touchmove', handleMousemove);
+      window.removeEventListener('touchend', handleMouseup);
+    }
+    node.addEventListener('mousedown', handleMousedown);
+    node.addEventListener('touchstart', handleMousedown);
+    return {
+      destroy() {
+        node.removeEventListener('mousedown', handleMousedown);
+        node.removeEventListener('touchstart', handleMousedown);
+      }
+    };
+  }
 
   function setHandlePosition(which) {
     return evt => {
@@ -78,8 +81,10 @@
       const year = percentToYear(percent);
       if (which === 'start') {
         start = Math.min(year, end);
+        showStartTooltip = true;
       } else {
         end = Math.max(year, start);
+        showEndTooltip = true;
       }
     };
   }
@@ -108,26 +113,52 @@
         right: {100 - yearToPercent(end)}%;
       "
     ></div>
+
     <div
       class="handle"
+      role="slider"
+      tabindex="0"
+      aria-valuemin={minYear}
+      aria-valuemax={maxYear}
+      aria-valuenow={start}
+      aria-label="Start year slider"
       bind:this={leftHandle}
       data-which="start"
       use:draggable
       on:dragmove|preventDefault|stopPropagation={setHandlePosition('start')}
-      style="
-        left: {yearToPercent(start)}%;
-      "
+      on:dragend={() => showStartTooltip = false}
+      style="left: {yearToPercent(start)}%;"
     ></div>
+
+    {#if showStartTooltip}
+      <div class="tooltip" style="left: {yearToPercent(start)}%;">
+        {start}
+      </div>
+    {/if}
+
     <div
       class="handle"
+      role="slider"
+      tabindex="0"
+      aria-valuemin={minYear}
+      aria-valuemax={maxYear}
+      aria-valuenow={end}
+      aria-label="End year slider"
       bind:this={rightHandle}
       data-which="end"
       use:draggable
       on:dragmove|preventDefault|stopPropagation={setHandlePosition('end')}
-      style="
-        left: {yearToPercent(end)}%;
-      "
+      on:dragend={() => showEndTooltip = false}
+      style="left: {yearToPercent(end)}%;"
     ></div>
+
+
+    {#if showEndTooltip}
+      <div class="tooltip" style="left: {yearToPercent(end)}%;">
+        {end}
+      </div>
+    {/if}
+    
   </div>
 </div>
 
@@ -139,6 +170,7 @@
     box-sizing: border-box;
     white-space: nowrap;
   }
+
   .slider {
     position: relative;
     width: 100%;
@@ -149,12 +181,14 @@
     box-shadow: inset 0 7px 10px -5px #3a4d3b, inset 0 -1px 0px 0px #9c9c9c;
     border-radius: 1px;
   }
+
   .handle {
     position: absolute;
     top: 50%;
     width: 0;
     height: 0;
   }
+
   .handle:after {
     content: '';
     position: absolute;
@@ -165,14 +199,31 @@
     border: 1px solid #3a4d3b;
     transform: translate(-50%, -50%);
   }
+
   .handle:active:after {
     background-color: #ddd;
     z-index: 9;
   }
+
   .body {
     top: 0;
     position: absolute;
     background-color: #a3c4a5;
     bottom: 0;
   }
+
+  .tooltip {
+    position: absolute;
+    top: 2rem; /* statt -1.8rem */
+    transform: translateX(-50%);
+    background-color: #3a4d3b;
+    color: white;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 10;
+  }
+
 </style>

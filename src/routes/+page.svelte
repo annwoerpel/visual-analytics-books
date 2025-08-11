@@ -31,13 +31,11 @@
   export let data;
   let books = data.books ?? [];
 
-  // Initialbereich: 1970–2020
-  let start = 1970;
-  let end = 2020;
+  let start = 1876;
+  let end = 2019;
 
-  // Dynamische Jahrgrenzen
-  let minPublishedYear = 1900;
-  let maxPublishedYear = 2025;
+  let minPublishedYear = 1876;
+  let maxPublishedYear = 2019;
 
   // Reaktiv: min/max aus Daten berechnen
   $: if (books.length > 0) {
@@ -244,7 +242,6 @@ $: top_10_books = books
     }]
   };
 
-
   // Stacked Area Chart Konfiguration
   $: stackedAreaChartOptions = {
     title: { text: 'Amount of Publications' },
@@ -406,8 +403,8 @@ $: top_10_books = books
           {maxPublishedYear}
         />
         <div class="labels">
-          <div class="label">{start}</div>
-          <div class="label">{end}</div>
+          <div class="label">{minPublishedYear}</div>
+          <div class="label">{maxPublishedYear}</div>
         </div>
       </div>
     </div>
@@ -512,10 +509,16 @@ $: top_10_books = books
 
   .label:first-child {
     float: left;
+    font-family: Coolvetica Rg Cond, Arial;
+    letter-spacing: 2px;
+    font-size: 10;
   }
 
   .label:last-child {
     float: right;
+    font-family: Coolvetica Rg Cond, Arial;
+    letter-spacing: 2px;
+    font-size: 10;
   }
 
 

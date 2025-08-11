@@ -4,9 +4,9 @@
     import BookComponent from "../BookComponent.svelte";
     import BookSidebar from "../BookSidebar.svelte";
     import Navbar from "../Navbar.svelte";
+    import DoubleRangeSlider from '../DoubleRangeSlider.svelte';
     import { onMount, onDestroy } from 'svelte';
     import { browser } from '$app/environment';
-
     import { Tabs, TabItem, Checkbox, Search, Tooltip } from "flowbite-svelte";
 
     import { Chart } from 'svelte-echarts';
@@ -18,6 +18,17 @@
     let books = data.books ?? [];
     let selectedBook = null;
     let myLibrary = [];
+
+    // Initialbereich: 1970–2020
+    let start = 1876;
+    let end = 2019;
+
+    // Dynamische Jahrgrenzen
+    let minPublishedYear = 1876;
+    let maxPublishedYear = 2019;
+
+    // Filter Rating
+    let minRating = 0; // z. B. 0 bis 5
 
     // Nur die häufigsten Genres extrahieren
     $: genreCounts = {};
@@ -77,12 +88,29 @@
             book.title?.toLowerCase().includes(localSearch.toLowerCase()) ||
             book.authors?.toLowerCase().includes(localSearch.toLowerCase()) ||
             book.isbn13?.toLowerCase().includes(localSearch.toLowerCase());
+
         const matchesGenre =
             localGenreArray.length === 0 ||
-            (book.categories && book.categories.split(',').map(c => c.trim()).some(g => localGenreArray.includes(g)));
+            (book.categories &&
+                book.categories
+                    .split(',')
+                    .map(c => c.trim())
+                    .some(g => localGenreArray.includes(g)));
+
         const matchesPages =
-            !book.num_pages || isNaN(parseInt(book.num_pages)) || parseInt(book.num_pages) <= maxPagesFilter;
-        return matchesSearch && matchesGenre && matchesPages;
+            !book.num_pages ||
+            isNaN(parseInt(book.num_pages)) ||
+            parseInt(book.num_pages) <= maxPagesFilter;
+
+        const year = parseInt(book.published_year);
+        const matchesYear =
+            !year || isNaN(year) || (year >= start && year <= end);
+
+        const matchesRating =
+            !book.average_rating || isNaN(parseFloat(book.average_rating)) || parseFloat(book.average_rating) >= minRating;
+
+        return matchesSearch && matchesGenre && matchesPages && matchesYear && matchesRating;
+
     });
 
     use([RadarChart, GridComponent, CanvasRenderer, TitleComponent, LegendComponent, SunburstChart, ToolboxComponent, TooltipComponent]);
@@ -232,10 +260,10 @@
                     value: radarAllTaste,
                     name: 'Average Taste',
                     itemStyle: {
-                        color: '#88C0D0'  // Farbe der Fläche
+                        color: '#9ac0c9'  // Farbe der Fläche
                     },
                     lineStyle: {
-                        color: '#5E81AC'  // Randlinie
+                        color: '#9ac0c9'  // Randlinie
                     },
                     areaStyle: {
                         opacity: 0.3
@@ -245,10 +273,10 @@
                     value: [5,4.5,3,3.8,4,1.5,5,3,2.5,3.5],
                     name: 'My Taste',
                     itemStyle: {
-                        color: '#A3BE8C'
+                        color: '#a3c4a5'
                     },
                     lineStyle: {
-                        color: '#8FBCBB'
+                        color: '#a3c4a5'
                     },
                     areaStyle: {
                         opacity: 0.3
@@ -270,7 +298,7 @@
 
     function getColorByLibraryCount(count, max) {
         const alpha = max > 0 ? Math.min(1, count / max) : 0;
-        return `rgba(163, 190, 140, ${alpha.toFixed(2)})`; // #A3BE8C mit Transparenz
+        return `rgba(163, 196, 165, ${alpha.toFixed(2)})`; // #A3BE8C mit Transparenz
     }
 
     $: sunburstData = Object.entries(categoryGroups).map(([groupName, groupCategories]) => {
@@ -301,15 +329,29 @@
     });
 
     $: option_sunburst = {
+        title: {
+            text: 'Distribution of all Books in my Library',
+            left: 'center',
+            top: '12px',
+            textStyle: {
+                align: 'center',
+                color: '#3a4d3b',
+                fontFamily: 'Arial',
+                align: 'center',
+                fontSize: '0.7em',
+                letterSpacing: '1px'
+            }
+        },
         series: {
             type: 'sunburst',
-            radius: [0, '100%'],
+            center: ['50%', '55%'], // weiter unten
+            radius: [0, '90%'],
             data: sunburstData,
             levels: [
             {},
             {
                 r0: '0%',
-                r: '70%',
+                r: '60%',
                 label: {
                     fontSize: 11,
                     color: '#3a4d3b',
@@ -318,8 +360,8 @@
                 }
             },
             {
-                r0: '70%',
-                r: '95%',
+                r0: '60%',
+                r: '85%',
                 label: {
                 fontSize: 10,
                 color: '#3a4d3b',
@@ -370,7 +412,7 @@
 
                 return `
                 <strong>${name}</strong><br/>
-                Total: ${value}<br/>
+                Available: ${value}<br/>
                 In Library: ${libraryCount} (${percent}%)<br/>
                 ${bar}
                 `;
@@ -413,19 +455,44 @@
 
 <Navbar>
     <div slot="slider">
-        <div class="slider">
-            <Tooltip class="bg-[#fffefc] text-[#a3c4a5] px-3 py-2 rounded shadow-lg ease-in-out border border-[#a3c4a5]"
-                        style="font-family: 'Coolvetica Rg', Arial; letter-spacing: 1.2px; font-size: 0.8em;"
-                        animation="duration-200">
-                Search by title, author or ISBN</Tooltip>
-            <Search
-                size="sm"
-                bind:value={localSearch}
-                placeholder="Search books"
-                inputClass="w-full focus:ring-[#a3c4a5] focus:border-[#a3c4a5] bg-[#fffefc] placeholder-gray-400"
-                style="font-family: 'Coolvetica Rg', Arial; letter-spacing: 1.5px; font-size: 0.8em;"
-            >
-            </Search>
+        <div class="slider-container">
+            <div class="w-full md:w-37.5 dropdown-container relative" bind:this={dropdownRef}>
+                <button
+                    class="w-full bg-[#fffefc] border border-[#a3c4a5] rounded-lg px-4 py-2 text-left"
+                    on:click={toggleDropdown}
+                    style="font-family: 'Coolvetica Rg Cond', Arial; letter-spacing: 1px; font-size: 0.9em;"
+                    >
+                    {localGenreArray.length > 0 ? localGenreArray.join(', ') : 'Filter Genres'}
+                </button>
+                {#if dropdownOpen}
+                    <div class="absolute z-10 mt-2 w-full bg-white border border-[#a3c4a5] rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                        {#each genres as genre}
+                        <label class="flex items-center px-4 py-2 hover:bg-[#f0f0f0]" style="font-family: 'Coolvetica Rg', Arial; letter-spacing: 1.5px; font-size: 0.8em;">
+                            <input
+                            type="checkbox"
+                            class="mr-2 accent-[#a3c4a5]"
+                            value={genre}
+                            checked={localGenreArray && localGenreArray.includes(genre)}
+                            on:change={() => toggleGenre(genre)}
+                            />
+                            {genre}
+                        </label>
+                        {/each}
+                    </div>
+                {/if}
+            </div>
+            <div class="slider">
+                <DoubleRangeSlider 
+                bind:start
+                bind:end
+                {minPublishedYear}
+                {maxPublishedYear}
+                />
+                <div class="labels">
+                <div class="label">{minPublishedYear}</div>
+                <div class="label">{maxPublishedYear}</div>
+                </div>
+            </div>
         </div>
     </div>
 </Navbar>
@@ -446,36 +513,43 @@
         <Tabs tabStyle="pill">
 
             <!-- Filter -->
-            <div class="w-full flex flex-col md:flex-row items-start gap-6 px-2 pt-2 bg-[#f7f7f4] rounded-lg shadow-md">
-                <!-- Genre Dropdown -->
-                <div class="w-full md:w-1/2 dropdown-container relative" bind:this={dropdownRef}>
-                    <button
-                        class="w-full bg-[#fffefc] border border-[#a3c4a5] rounded-lg px-4 py-2 text-left"
-                        on:click={toggleDropdown}
-                        style="font-family: 'Coolvetica Rg Cond', Arial; letter-spacing: 1px; font-size: 0.9em;"
-                        >
-                        {localGenreArray.length > 0 ? localGenreArray.join(', ') : 'Filter Genres'}
-                    </button>
-                    {#if dropdownOpen}
-                    <div class="absolute z-10 mt-2 w-full bg-white border border-[#a3c4a5] rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                        {#each genres as genre}
-                        <label class="flex items-center px-4 py-2 hover:bg-[#f0f0f0]" style="font-family: 'Coolvetica Rg', Arial; letter-spacing: 1.5px; font-size: 0.8em;">
-                            <input
-                            type="checkbox"
-                            class="mr-2 accent-[#a3c4a5]"
-                            value={genre}
-                            checked={localGenreArray && localGenreArray.includes(genre)}
-                            on:change={() => toggleGenre(genre)}
-                            />
-                            {genre}
-                        </label>
-                        {/each}
-                    </div>
-                    {/if}
+            <div class="w-full flex flex-col md:flex-row items-start gap-1 px-2 pt-2 bg-[#f7f7f4] rounded-lg shadow-md">
+                <div class="w-100 mr-5 mt-1">
+                    <Tooltip class="bg-[#fffefc] text-[#a3c4a5] px-3 py-2 rounded shadow-lg ease-in-out border border-[#a3c4a5]"
+                            style="font-family: 'Coolvetica Rg', Arial; letter-spacing: 1.2px; font-size: 0.8em;"
+                            animation="duration-200">
+                    Search by title, author or ISBN</Tooltip>
+                    <Search
+                        size="sm"
+                        bind:value={localSearch}
+                        placeholder="Search books"
+                        inputClass="w-full focus:ring-[#a3c4a5] focus:border-[#a3c4a5] bg-[#fffefc] placeholder-gray-400"
+                        style="font-family: 'Coolvetica Rg', Arial; letter-spacing: 1.5px; font-size: 0.8em;"
+                    >
+                    </Search>
+                </div>
+
+                <div class="rating-filter w-40 mr-5 mt-1">
+                    <label for="rating" style="font-size: larger; margin-right: -2px;">
+                        ★
+                    </label>
+                    <select
+                        id="rating"
+                        bind:value={minRating}
+                        class="no-arrow border border-[#a3c4a5] rounded px-2 py-1 text-sm bg-[#fffefc]"
+                        style="font-family: 'Coolvetica Rg', Arial;"
+                    >
+                        <option value="0" selected>-</option>
+                        <option value="1">1+</option>
+                        <option value="2">2+</option>
+                        <option value="3">3+</option>
+                        <option value="4">4+</option>
+                        <option value="5">5</option>
+                    </select>
                 </div>
 
                 <!-- Seitenzahl-Filter -->
-                <div class="w-full md:w-1/2">
+                <div class="w-full md:w-1/2" style="margin-left:-60px;">
                     <div class="mb-0" style="font-family: Coolvetica Rg Cond, Arial; letter-spacing: 1px; font-size: 0.9em;">{maxPagesFilter} pages or less</div>
                     <input type="range" min="0" max={maxPages} step="10" bind:value={maxPagesFilter} class="w-full accent-[#a3c4a5]" />
                 </div>
@@ -521,29 +595,6 @@
                     {/if}
                 </div>
             </TabItem>
-
-            <TabItem
-                title="Recommendations"
-                activeClass="bg-[#a3c4a5]/90 text-white min-w-[120px] h-[60px] flex flex-col items-center justify-center rounded-lg"
-                inactiveClass="bg-[#fffefc] text-[#3a4d3b] hover:text-white hover:bg-[#a3c4a5] min-w-[120px] h-[60px] flex flex-col items-center justify-center rounded-lg transition-colors duration-200 ease-in-out"
-                style="font-family: 'Coolvetica Rg', Arial;"
-            >
-                <div class="scrollable-tab-content">
-                    <div class="grid grid-cols-9 gap-1 items-center p-4">
-                        {#each localFilteredBooks.filter(book => myLibrary.includes(book.isbn13)) as book}
-                            <div class="w-full h-35">
-                                <BookComponent {book} index={100} onOpenSidebar={openSidebar} />
-                            </div>
-                        {/each}
-                    </div>
-                    {#if localFilteredBooks.filter(book => myLibrary.includes(book.isbn13)).length === 0}
-                        <p class="text-sm tracking-wide text-center mt-8 text-gray-400"
-                            style="font-family: 'Coolvetica Rg', Arial;">
-                            Recommend top 10 books of all time
-                        </p>
-                    {/if}
-                </div>
-            </TabItem>
         </Tabs>
     </div>
 </div>
@@ -567,9 +618,37 @@
     }
     
     .slider {
-        width: 35vw;
+        width: 25vw;
         margin: 0 auto;
         text-align: center;
     }
+
+    .slider-container {
+        display: flex;
+        align-items: center;
+        gap: 1rem; /* Abstand zwischen Dropdown und Slider */
+        width: 35vw;
+    }
+
+    .label:first-child {
+        float: left;
+        font-family: Coolvetica Rg Cond, Arial;
+        letter-spacing: 2px;
+        font-size: 10;
+    }
+
+    .label:last-child {
+        float: right;
+        font-family: Coolvetica Rg Cond, Arial;
+        letter-spacing: 2px;
+        font-size: 10;
+    }
+
+    .no-arrow {
+        appearance: none;
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        background-image: none;
+     }
 
 </style>

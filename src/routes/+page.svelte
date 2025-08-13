@@ -1,12 +1,12 @@
 <script>
   import WordCloud from "./WordCloud.svelte";
 
-  import { Chart } from 'svelte-echarts'
-  import { init, use } from 'echarts/core'
-  import { ScatterChart, RadarChart, LineChart } from 'echarts/charts'
-  import { GridComponent, LegendComponent, TitleComponent, ToolboxComponent, TooltipComponent } from 'echarts/components'
-  import { CanvasRenderer } from 'echarts/renderers'
-  import { UniversalTransition } from 'echarts/features'
+  import { Chart } from 'svelte-echarts';
+  import { init, use } from 'echarts/core';
+  import { ScatterChart, RadarChart, LineChart, BarChart, GraphChart } from 'echarts/charts';
+  import { GridComponent, LegendComponent, TitleComponent, ToolboxComponent, TooltipComponent } from 'echarts/components';
+  import { CanvasRenderer } from 'echarts/renderers';
+  import { UniversalTransition } from 'echarts/features';
 
   import { Banner, Button, Dropdown, DropdownDivider, DropdownItem, Select, Label } from "flowbite-svelte";
 
@@ -155,7 +155,7 @@ $: top_10_books = books
     };
   });
 
-  use([ScatterChart, RadarChart, GridComponent, CanvasRenderer, TitleComponent, ToolboxComponent, TooltipComponent, LegendComponent, LineChart, UniversalTransition]);
+  use([ScatterChart, RadarChart, GridComponent, CanvasRenderer, TitleComponent, ToolboxComponent, TooltipComponent, LegendComponent, LineChart, UniversalTransition, BarChart, GraphChart]);
 
   $: scatterData = [];
 
@@ -318,6 +318,15 @@ $: top_10_books = books
     .sort((a, b) => b.count - a.count)
     .slice(0, 5)
     .map(g => g.genre);
+  
+  $: top10GenresOverall = Object.entries(genreYearCounts)
+    .map(([genre, yearData]) => {
+      const count = Object.values(yearData).reduce((sum, v) => sum + v, 0);
+      return { genre, count };
+    })
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 10)
+    .map(g => g.genre);
 
   $: allGenres = Object.entries(genreYearCounts)
     .map(([genre, yearData]) => {
@@ -383,6 +392,227 @@ $: top_10_books = books
     series: bumpSeriesList
   };
 
+
+// Bar + Line Chart
+const groupedByYear = {};
+
+books.forEach(book => {
+  const year = parseInt(book.published_year);
+  const rating = parseFloat(book.average_rating);
+  const genres = book.categories?.split(',').map(g => g.trim()) ?? [];
+
+  if (!groupedByYear[year]) {
+    groupedByYear[year] = { ratings: [], genreRatings: {} };
+  }
+
+  groupedByYear[year].ratings.push(rating);
+
+  genres.forEach(genre => {
+    if (!groupedByYear[year].genreRatings[genre]) {
+      groupedByYear[year].genreRatings[genre] = [];
+    }
+    groupedByYear[year].genreRatings[genre].push(rating);
+  });
+});
+
+const barLineChartData = Object.entries(groupedByYear).map(([year, data]) => {
+  const avgRating =
+    data.ratings.reduce((a, b) => a + b, 0) / data.ratings.length;
+
+  const genreAverages = Object.entries(data.genreRatings).map(([genre, ratings]) => ({
+    genre,
+    avg: ratings.reduce((a, b) => a + b, 0) / ratings.length
+  }));
+
+  const sortedGenres = genreAverages.sort((a, b) => b.avg - a.avg);
+  const bestGenre = sortedGenres[0] ?? { genre: 'N/A', avg: 0 };
+  const worstGenre = sortedGenres[sortedGenres.length - 1] ?? { genre: 'N/A', avg: 0 };
+
+  return {
+    year: parseInt(year),
+    avgRating,
+    bestGenreRating: bestGenre.avg,
+    bestGenreName: bestGenre.genre,
+    worstGenreRating: worstGenre.avg,
+    worstGenreName: worstGenre.genre
+  };
+});
+
+$: filteredBarLineChartData = barLineChartData.filter(d => d.year >= start && d.year <= end);
+
+$: barLineChartOption = {
+  tooltip: {
+    trigger: 'axis',
+    axisPointer: { type: 'cross' },
+    formatter: function (params) {
+      const year = params[0].axisValue;
+      const data = filteredBarLineChartData.find(d => d.year === parseInt(year));
+      if (!data) return '';
+
+      return `
+        <strong>${year}</strong><br/>
+        Avg Rating: ${data.avgRating.toFixed(2)}<br/>
+        Best Genre: ${data.bestGenreName} (${data.bestGenreRating.toFixed(2)})<br/>
+        Worst Genre: ${data.worstGenreName} (${data.worstGenreRating.toFixed(2)})
+      `;
+    }
+  },
+  legend: {
+    data: ['Avg Rating', 'Best Genre', 'Worst Genre']
+  },
+  xAxis: {
+    type: 'category',
+    data: filteredBarLineChartData.map(d => d.year),
+    axisLabel: { formatter: '{value}' }
+  },
+  yAxis: {
+    type: 'value',
+    min: 0,
+    max: 5,
+    interval: 1,
+    axisLabel: { formatter: '{value} ★' }
+  },
+  series: [
+    {
+      name: 'Best Genre',
+      type: 'bar',
+      data: filteredBarLineChartData.map(d => d.bestGenreRating),
+      itemStyle: { color: '#a3c4a5' }
+    },
+    {
+      name: 'Worst Genre',
+      type: 'bar',
+      data: filteredBarLineChartData.map(d => d.worstGenreRating),
+      itemStyle: { color: '#f2b5b5' }
+    },
+    {
+      name: 'Avg Rating',
+      type: 'line',
+      data: filteredBarLineChartData.map(d => d.avgRating),
+      lineStyle: { color: '#3a4d3b' },
+      symbol: 'circle',
+      symbolSize: 6
+    }
+  ]
+};
+
+// Graph Chart
+$: authorCountPerGenre = {};
+
+$: books.forEach(book => {
+  const author = book.authors?.trim();
+  const genre = book.categories?.trim();
+
+  if (!author || !genre || !top10GenresOverall.includes(genre)) return;
+
+  if (!authorCountPerGenre[genre]) {
+    authorCountPerGenre[genre] = new Set();
+  }
+
+  authorCountPerGenre[genre].add(author);
+});
+
+$: filteredBooksByTopGenres = books.filter(book =>
+  top10GenresOverall.includes(book.categories?.trim())
+);
+
+$: genreLinksMap = (() => {
+  const map = {};
+  const genreSet = new Set();
+
+  const authorGenresMap = {};
+
+  filteredBooksByTopGenres.forEach(book => {
+    const author = book.authors?.trim();
+    const genre = book.categories?.trim();
+
+    if (!author || !genre) return;
+
+    if (!authorGenresMap[author]) {
+      authorGenresMap[author] = new Set();
+    }
+
+    authorGenresMap[author].add(genre);
+    genreSet.add(genre);
+  });
+
+  Object.values(authorGenresMap).forEach(genreSetForAuthor => {
+    const genres = Array.from(genreSetForAuthor);
+    for (let i = 0; i < genres.length; i++) {
+      for (let j = i + 1; j < genres.length; j++) {
+        const g1 = genres[i];
+        const g2 = genres[j];
+        const key = [g1, g2].sort().join('↔');
+
+        if (!map[key]) map[key] = 0;
+        map[key]++;
+      }
+    }
+  });
+
+  return { map, genreSet };
+})();
+
+$: graphNodes = top10GenresOverall.map(genre => {
+  const authorCount = authorCountPerGenre[genre]?.size || 0;
+  return {
+    id: genre,
+    name: genre,
+    category: 0,
+    symbolSize: Math.sqrt(authorCount)
+  };
+});
+
+$: graphLinks = Object.entries(genreLinksMap.map).map(([key, value]) => {
+  const [source, target] = key.split('↔');
+  return {
+    source,
+    target,
+    value,
+    lineStyle: {
+      width: Math.min(value, 5),
+      opacity: 0.6
+    }
+  };
+});
+
+$: graphChartOptions = {
+  title: {
+    text: 'Authors per Genre'
+  },
+  tooltip: {
+    formatter: function (params) {
+      if (params.dataType === 'node') {
+        const count = authorCountPerGenre[params.data.name]?.size || 0;
+        return `${params.data.name}<br/>Authors in this Genre: ${count}`;
+      }
+      if (params.dataType === 'edge') {
+        return `${params.data.source} ↔ ${params.data.target}<br/>Matching Authors: ${params.data.value}`;
+      }
+    }
+  },
+  series: [
+    {
+      type: 'graph',
+      layout: 'circular',
+      circular: { rotateLabel: false },
+      data: graphNodes,
+      links: graphLinks,
+      center: ['50%', '50%'],
+      radius: '80%',          
+      roam: true,
+      label: { show: false },
+      emphasis: { label: { show: false } },
+      lineStyle: {
+        color: 'source',
+        curveness: 0.2
+      }
+    }
+  ]
+};
+
+
+
 </script>
 
 <Navbar>
@@ -424,11 +654,8 @@ $: top_10_books = books
     <Chart class="-mt-13" {init} options={scatterChartOptions} />
   </div>
 
-  <h1>Top Cover Colors</h1>
-  <div class="flex grid grid-cols-10 gap-1 items-center p-4">
-    {#each top_10_colors as color}
-      <ColorBlob color={color} size={60} />
-    {/each}
+  <div class="flex items-center p-2 w-100 h-45" style="margin-left: -20px;">
+    <Chart {init} options={graphChartOptions} />
   </div>
 </div>
 
@@ -442,11 +669,15 @@ $: top_10_books = books
   </div>
 
   <div class="graph">
-    <Chart {init} options={stackedAreaChartOptions} />
+    <Chart {init} options={barLineChartOption} />
   </div>
 
   <div class="graph">
-    <Chart {init} options={bumpChartOptions} />
+    <div class="flex grid grid-cols-10 gap-1 items-center p-4">
+      {#each top_10_colors as color}
+        <ColorBlob color={color} size={60} />
+      {/each}
+    </div>
   </div>
 </div>
 
@@ -493,18 +724,6 @@ $: top_10_books = books
   wordcloud {
     text-align: center;
     max-width: 25%;
-  }
-
-  h1 {
-    font-family: Coolvetica Rg Cond, Arial;
-    letter-spacing: 2px;
-    font-size: 10;
-    font-weight: normal;
-    text-align: center;
-    margin: 0;
-    color: rgba(0, 0, 0, 0.8);
-    margin-top: 10px;
-    margin-bottom: -10px;
   }
 
   .label:first-child {

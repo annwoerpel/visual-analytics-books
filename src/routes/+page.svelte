@@ -197,6 +197,7 @@ $: top_10_books = books
   const interval = Math.ceil(xRange / maxLabels);
 
   $: scatterChartOptions = {
+    toolbox: { feature: { saveAsImage: {} } },
     grid: {
       bottom: 0,
       containLabel: true
@@ -440,7 +441,11 @@ const barLineChartData = Object.entries(groupedByYear).map(([year, data]) => {
 
 $: filteredBarLineChartData = barLineChartData.filter(d => d.year >= start && d.year <= end);
 
-$: barLineChartOption = {
+$: barLineChartOptions = {
+  toolbox: { feature: { saveAsImage: {} } },
+  title: {
+    text: "Average Rating over Time"
+  },
   tooltip: {
     trigger: 'axis',
     axisPointer: { type: 'cross' },
@@ -467,9 +472,9 @@ $: barLineChartOption = {
   },
   yAxis: {
     type: 'value',
-    min: 0,
+    min: 3,
     max: 5,
-    interval: 1,
+    interval: 0.5,
     axisLabel: { formatter: '{value} ★' }
   },
   series: [
@@ -488,10 +493,9 @@ $: barLineChartOption = {
     {
       name: 'Avg Rating',
       type: 'line',
+      showSymbol: false,
       data: filteredBarLineChartData.map(d => d.avgRating),
-      lineStyle: { color: '#3a4d3b' },
-      symbol: 'circle',
-      symbolSize: 6
+      lineStyle: { color: '#3a4d3b' }
     }
   ]
 };
@@ -577,6 +581,7 @@ $: graphLinks = Object.entries(genreLinksMap.map).map(([key, value]) => {
 });
 
 $: graphChartOptions = {
+  toolbox: { feature: { saveAsImage: {} } },
   title: {
     text: 'Authors per Genre'
   },
@@ -612,6 +617,156 @@ $: graphChartOptions = {
 };
 
 
+// Color Bubble Chart
+function parseRGB(rgbString) {
+  if (!rgbString || typeof rgbString !== 'string') return [0, 0, 0];
+
+  const [r, g, b] = rgbString
+    .replace(/[^\d,]/g, '')
+    .split(',')
+    .map(x => parseInt(x));
+  return [r, g, b];
+}
+
+function getColorCentroids(colors, k =10) {
+  // colors: Array of [r, g, b]
+  const centroids = colors.slice(0, k); // naive Start
+  const assignments = new Array(colors.length).fill(0);
+
+  for (let iter = 0; iter < 10; iter++) {
+    // Zuweisung
+    colors.forEach((color, i) => {
+      let minDist = Infinity;
+      let best = 0;
+      centroids.forEach((c, j) => {
+        const dist = Math.sqrt(
+          (color[0] - c[0]) ** 2 +
+          (color[1] - c[1]) ** 2 +
+          (color[2] - c[2]) ** 2
+        );
+        if (dist < minDist) {
+          minDist = dist;
+          best = j;
+        }
+      });
+      assignments[i] = best;
+    });
+
+    // Neue Zentren
+    const sums = Array(k).fill().map(() => [0, 0, 0]);
+    const counts = Array(k).fill(0);
+
+    colors.forEach((color, i) => {
+      const cluster = assignments[i];
+      sums[cluster][0] += color[0];
+      sums[cluster][1] += color[1];
+      sums[cluster][2] += color[2];
+      counts[cluster]++;
+    });
+
+    centroids.forEach((_, j) => {
+      if (counts[j] > 0) {
+        centroids[j] = [
+          Math.round(sums[j][0] / counts[j]),
+          Math.round(sums[j][1] / counts[j]),
+          Math.round(sums[j][2] / counts[j])
+        ];
+      }
+    });
+  }
+
+  return { centroids, assignments };
+}
+
+const rgbVectors = books
+  .map(book => parseRGB(book.dominant_color))
+  .filter(v => v.length === 3);
+
+const { centroids, assignments } = getColorCentroids(rgbVectors, 10);
+
+const clusterCounts = Array(10).fill(0);
+assignments.forEach(i => clusterCounts[i]++);
+
+// cluster ratings
+const clusterRatings = Array(10).fill().map(() => []);
+
+books.forEach((book, i) => {
+  const rgb = parseRGB(book.dominant_color);
+  const clusterIndex = assignments[i];
+  const rating = parseFloat(book.average_rating);
+
+  if (!isNaN(rating)) {
+    clusterRatings[clusterIndex].push(rating);
+  }
+});
+
+const clusterAvgRatings = clusterRatings.map(ratings => {
+  if (ratings.length === 0) return 0;
+  const sum = ratings.reduce((a, b) => a + b, 0);
+  return sum / ratings.length;
+});
+
+const minRating = Math.min(...clusterAvgRatings);
+const maxRating = Math.max(...clusterAvgRatings);
+
+function scaleRating(rating) {
+  return 10 + ((rating - minRating) / (maxRating - minRating)) * 80;
+}
+
+$: bubbleData = centroids.map((rgb, i) => ({
+  name: `Cluster ${i + 1}`,
+  value: clusterCounts[i],
+  x: (i + 1) * (100 / (centroids.length + 1)),
+  y: clusterAvgRatings[i],
+  itemStyle: {
+    color: `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`
+  }
+}));
+
+$: bubbleChartOptions = {
+  toolbox: { feature: { saveAsImage: {} } },
+  title: {
+    text: "Average Rating per Color"
+  },
+  xAxis: { type: 'value', show: false, min: 0, max: 100 },
+  yAxis: {
+    type: 'value',
+    min: 3,
+    max: 5,
+    axisLabel: { formatter: '{value} ★' }
+  },
+  tooltip: {
+    formatter: function (params) {
+      const i = params.dataIndex;
+      const rating = clusterAvgRatings[i].toFixed(2);
+      const rgb = centroids[i];
+      const rgbString = `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
+
+      return `Cluster ${rgbString}<br/>Books: ${params.data[2]}<br/>Rating: ${rating}`;
+    }
+  },
+  series: [
+    {
+      type: 'scatter',
+      symbolSize: function (val) {
+        return Math.max(Math.sqrt(val[2]) * 3, 1);
+      },
+      data: bubbleData.map(d => [d.x, d.y, d.value, d.name]),
+      encode: {
+        x: 0,
+        y: 1,
+        tooltip: [3, 2]
+      },
+      itemStyle: {
+        opacity: 1.0,
+        color: function (params) {
+          return bubbleData[params.dataIndex].itemStyle.color;
+        }
+      },
+      label: { show: false }
+    }
+  ]
+};
 
 </script>
 
@@ -669,15 +824,11 @@ $: graphChartOptions = {
   </div>
 
   <div class="graph">
-    <Chart {init} options={barLineChartOption} />
+    <Chart {init} options={barLineChartOptions} />
   </div>
 
   <div class="graph">
-    <div class="flex grid grid-cols-10 gap-1 items-center p-4">
-      {#each top_10_colors as color}
-        <ColorBlob color={color} size={60} />
-      {/each}
-    </div>
+    <Chart {init} options={bubbleChartOptions} />
   </div>
 </div>
 

@@ -245,11 +245,21 @@ $: top_10_books = books
 
   // Stacked Area Chart Konfiguration
   $: stackedAreaChartOptions = {
-    title: { text: 'Amount of Publications' },
+    title: { 
+      text: 'Amount of Publications',
+      textStyle: {
+        fontSize: 14,
+        color: '#333',
+        fontFamily: 'Arial',
+        letterspacing: '2px'
+      },
+      left: 'center',
+      top: 'top'
+     },
     tooltip: { trigger: 'axis', axisPointer: { type: 'cross' } },
     legend: { data: topGenresByCount, bottom: 0 },
     toolbox: { feature: { saveAsImage: {} } },
-    grid: { left: '3%', right: '4%', bottom: '8%', containLabel: true },
+    grid: { left: '3%', right: '4%', bottom: '14%', top: '18%', containLabel: true },
     xAxis: [{ type: 'category', boundaryGap: false, data: stackedYears }],
     yAxis: [{ type: 'value' }],
     series: stackedAreaSeries
@@ -360,14 +370,19 @@ $: top_10_books = books
       hideOverlap: true,
       moveOverlap: true
     },
-    title: { text: 'Genre Popularity' },
-    tooltip: { trigger: 'item' },
-    grid: {
-      left: 30,
-      right: 110,
-      bottom: 40,
-      containLabel: true
+    title: { 
+      text: 'Genre Popularity',
+      textStyle: {
+        fontSize: 14,
+        color: '#333',
+        fontFamily: 'Arial',
+        letterspacing: '2px'
+      },
+      left: 'center',
+      top: 'top'
     },
+    tooltip: { trigger: 'item' },
+    grid: { left: '3%', right: '20%', bottom: '14%', top: '18%', containLabel: true },
     legend: { show: true, bottom: 0 },
     toolbox: { feature: { saveAsImage: {} } },
     xAxis: {
@@ -444,7 +459,15 @@ $: filteredBarLineChartData = barLineChartData.filter(d => d.year >= start && d.
 $: barLineChartOptions = {
   toolbox: { feature: { saveAsImage: {} } },
   title: {
-    text: "Average Rating over Time"
+    text: "Average Rating over Time",
+    textStyle: {
+        fontSize: 14,
+        color: '#333',
+        fontFamily: 'Arial',
+        letterspacing: '2px'
+      },
+      left: 'center',
+      top: 'top'
   },
   tooltip: {
     trigger: 'axis',
@@ -463,7 +486,8 @@ $: barLineChartOptions = {
     }
   },
   legend: {
-    data: ['Avg Rating', 'Best Genre', 'Worst Genre']
+    data: ['Avg Rating', 'Best Genre', 'Worst Genre'],
+    bottom: 0
   },
   xAxis: {
     type: 'category',
@@ -477,6 +501,7 @@ $: barLineChartOptions = {
     interval: 0.5,
     axisLabel: { formatter: '{value} ★' }
   },
+  grid: { left: '3%', right: '4%', bottom: '14%', top: '18%', containLabel: true },
   series: [
     {
       name: 'Best Genre',
@@ -557,34 +582,126 @@ $: genreLinksMap = (() => {
   return { map, genreSet };
 })();
 
+// häufigste Farbe per genre group
+
+const categoryGroups = {
+        "Fiction": ['Fiction', 'Juvenile Fiction', 'Juvenile Nonfiction', 'Drama', 'Poetry', 'Humor', 'Comics & Graphic Novels'],
+        "Arts & Leisure Time": ['Literary Criticism', 'Computers', 'Cooking', 'Performing Arts', 'Travel', 'Art', 'Literary Collections'],
+        "Guides": ['Family & Relationships', 'Body, Mind & Spirit', 'Language Arts & Disciplines', 'Business & Economics', 'Health & Fitness', 'Self-Help'],
+        "Non-Fiction": ['Social Science', 'Religion', 'Science', 'History', 'Psychology', 'Philosophy', 'Political Science', 'Biography & Autobiography']
+    }
+
+$: categoryGroupColors = {};
+
+const groupToBooks = {};
+
+$: books.forEach(book => {
+  const genre = book.categories?.trim();
+  if (!genre) return;
+
+  for (const [groupName, genres] of Object.entries(categoryGroups)) {
+    if (genres.includes(genre)) {
+      if (!groupToBooks[groupName]) groupToBooks[groupName] = [];
+      groupToBooks[groupName].push(book);
+      break;
+    }
+  }
+});
+
+$: Object.entries(groupToBooks).forEach(([groupName, booksInGroup]) => {
+  const rgbVectors = booksInGroup
+    .map(b => parseRGB(b.dominant_color))
+    .filter(v => v.length === 3 && v.every(n => !isNaN(n)));
+
+  if (rgbVectors.length === 0) return;
+
+  const { centroids, assignments } = getColorCentroids(rgbVectors, 20);
+
+  const clusterCounts = Array(20).fill(0);
+  assignments.forEach(i => clusterCounts[i]++);
+
+  const mostFrequentIndex = clusterCounts.indexOf(Math.max(...clusterCounts));
+  const rgb = centroids[mostFrequentIndex];
+
+  categoryGroupColors[groupName] = `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
+});
+
+function getGroupForGenre(genre) {
+  for (const [groupName, genres] of Object.entries(categoryGroups)) {
+    if (genres.includes(genre)) return groupName;
+  }
+  return null;
+}
+
+function getGroupIndex(genre) {
+  const groupName = getGroupForGenre(genre);
+  if (!graphCategories || !groupName) return 0;
+
+  const index = graphCategories.findIndex(c => c.name === groupName);
+  return index !== -1 ? index : 0;
+}
+
+$: graphCategories = Object.entries(categoryGroupColors).map(([groupName, color]) => ({
+  name: groupName,
+  itemStyle: { color }
+}));
+
 $: graphNodes = top10GenresOverall.map(genre => {
   const authorCount = authorCountPerGenre[genre]?.size || 0;
+  const categoryIndex = getGroupIndex(genre);
+
   return {
     id: genre,
     name: genre,
-    category: 0,
-    symbolSize: Math.sqrt(authorCount)
+    category: categoryIndex,
+    symbolSize: Math.sqrt(authorCount),
+    itemStyle: {
+      borderColor: '#999',     // 👈 z. B. dunkle Umrandung
+      borderWidth: 1           // 👈 Dicke der Linie
+    }
   };
 });
 
 $: graphLinks = Object.entries(genreLinksMap.map).map(([key, value]) => {
   const [source, target] = key.split('↔');
+  const sourceGroup = getGroupForGenre(source);
+  const color = categoryGroupColors[sourceGroup] || '#ccc';
+
   return {
     source,
     target,
     value,
     lineStyle: {
+      color,
       width: Math.min(value, 5),
-      opacity: 0.6
+      opacity: 0.6,
+      shadowColor: '#777',
+      shadowBlur:1
     }
   };
 });
 
 $: graphChartOptions = {
-  toolbox: { feature: { saveAsImage: {} } },
   title: {
-    text: 'Authors per Genre'
+    text: 'Authors per Genre',
+    left: 'left',
+    top: 'top',
+    textStyle: {
+      fontSize: 14,
+      color: '#333',
+      fontFamily: 'Arial',
+      letterspacing: '2px'
+    }
   },
+  legend: [{
+    data: graphCategories.map(c => c.name),
+    orient: 'vertical',
+    top: '35',
+    left: 'left',
+    textStyle: {
+      fontSize: 10
+    }
+  }],
   tooltip: {
     formatter: function (params) {
       if (params.dataType === 'node') {
@@ -603,8 +720,9 @@ $: graphChartOptions = {
       circular: { rotateLabel: false },
       data: graphNodes,
       links: graphLinks,
-      center: ['50%', '50%'],
-      radius: '80%',          
+      categories: graphCategories,
+      center: ['25%', '50%'],
+      radius: '80%',
       roam: true,
       label: { show: false },
       emphasis: { label: { show: false } },
@@ -726,7 +844,15 @@ $: bubbleData = centroids.map((rgb, i) => ({
 $: bubbleChartOptions = {
   toolbox: { feature: { saveAsImage: {} } },
   title: {
-    text: "Average Rating per Color"
+    text: "Average Rating per Color",
+    textStyle: {
+        fontSize: 14,
+        color: '#333',
+        fontFamily: 'Arial',
+        letterspacing: '2px'
+      },
+      left: 'center',
+      top: 'top'
   },
   xAxis: { type: 'value', show: false, min: 0, max: 100 },
   yAxis: {
@@ -735,6 +861,7 @@ $: bubbleChartOptions = {
     max: 5,
     axisLabel: { formatter: '{value} ★' }
   },
+  grid: { left: '3%', right: '4%', bottom: '5%', top: '18%', containLabel: true },
   tooltip: {
     formatter: function (params) {
       const i = params.dataIndex;
@@ -809,7 +936,7 @@ $: bubbleChartOptions = {
     <Chart class="-mt-13" {init} options={scatterChartOptions} />
   </div>
 
-  <div class="flex items-center p-2 w-100 h-45" style="margin-left: -20px;">
+  <div class="circleGraph flex-3 items-center p-2 w-full h-40 mt-3 mr-3">
     <Chart {init} options={graphChartOptions} />
   </div>
 </div>
@@ -831,7 +958,6 @@ $: bubbleChartOptions = {
     <Chart {init} options={bubbleChartOptions} />
   </div>
 </div>
-
 
 <BookSidebar book={selectedBook} onClose={closeSidebar} />
 
@@ -855,7 +981,7 @@ $: bubbleChartOptions = {
 
   .scatter {
     height: 28vh;
-    min-width: 60%;
+    min-width: 50%;
   }
 
   .graph {
@@ -864,6 +990,10 @@ $: bubbleChartOptions = {
     background-color: #fffefc;
     border-radius: 8px;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  }
+
+  .circleGraph {
+    border-radius: 8px;
   }
 
   .slider {

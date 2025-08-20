@@ -1,9 +1,9 @@
 <script>
   import { clamp } from 'yootils';
 
-  export let start = 1876;
+  export let start = 1980;
   export let end = 2019;
-  export let minYear = 1876;
+  export let minYear = 1980;
   export let maxYear = 2019;
 
   let leftHandle;

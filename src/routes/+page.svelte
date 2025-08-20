@@ -31,10 +31,10 @@
   export let data;
   let books = data.books ?? [];
 
-  let start = 1876;
+  let start = 1980;
   let end = 2019;
 
-  let minPublishedYear = 1876;
+  let minPublishedYear = 1980;
   let maxPublishedYear = 2019;
 
   // Reaktiv: min/max aus Daten berechnen
@@ -143,6 +143,8 @@ $: top_10_books = books
       .filter(y => !isNaN(y) && y >= start && y <= end)
   )).sort((a, b) => a - b);
 
+  var colorPalette = ['#FC95B3', '#FCDB95', '#95D8FC', '#95FCB2', '#D595FC'];
+
   $: stackedAreaSeries = topGenresByCount.map(genre => {
     const yearData = stackedYears.map(y => genreYearCounts[genre]?.[y] || 0);
     return {
@@ -203,7 +205,19 @@ $: top_10_books = books
       containLabel: true
     },
     tooltip: {
+      position: function (point, params, dom, rect, size) {
+        // Horizontale Mitte des Elements
+        const x = rect.x + rect.width / 2;
+        // Unterhalb des Elements
+        const y = rect.y + rect.height + 10;
+        return [x, y];
+      },
       trigger: 'item',
+      textStyle: {
+        fontFamily: 'Coolvetica Rg, Arial',
+        fontSize: 13,
+        color: '#3a4d3b'
+      },
       formatter: function (params) {
         const book = params.data.book;
         const rank = params.data.rank;
@@ -212,10 +226,10 @@ $: top_10_books = books
         const year = book.published_year;
 
         return `
-          <strong>#${rank}</strong><br/>
+          <strong>Rank: #${rank}</strong><br/>
           <em>${title}</em><br/>
           by ${author}<br/>
-          Published: ${year}
+          Published: ${parseInt(year)}
         `;
       }
     },
@@ -247,22 +261,32 @@ $: top_10_books = books
   $: stackedAreaChartOptions = {
     title: { 
       text: 'Amount of Publications',
+      top: '12px',
       textStyle: {
-        fontSize: 14,
-        color: '#333',
+        align: 'center',
+        color: '#3a4d3b',
         fontFamily: 'Arial',
-        letterspacing: '2px'
+        fontSize: '0.8em',
+        letterSpacing: '1px'
       },
       left: 'center',
       top: 'top'
      },
     tooltip: { trigger: 'axis', axisPointer: { type: 'cross' } },
-    legend: { data: topGenresByCount, bottom: 0 },
+    legend: { data: topGenresByCount, 
+      bottom: 0, 
+      textStyle: {
+        fontSize: 10,
+        fontFamily: 'Arial',
+        color: '#3a4d3b'
+      }
+    },
     toolbox: { feature: { saveAsImage: {} } },
     grid: { left: '3%', right: '4%', bottom: '14%', top: '18%', containLabel: true },
     xAxis: [{ type: 'category', boundaryGap: false, data: stackedYears }],
     yAxis: [{ type: 'value' }],
-    series: stackedAreaSeries
+    series: stackedAreaSeries,
+    color: colorPalette
   };
 
   // Bump Chart Konfiguration
@@ -357,7 +381,7 @@ $: top_10_books = books
     connectNulls: false,
     symbolSize: 10,
     endLabel: {
-      show: true,
+      show: false,
       formatter: genre,
       distance: 10
     },
@@ -372,18 +396,27 @@ $: top_10_books = books
     },
     title: { 
       text: 'Genre Popularity',
+      top: '12px',
       textStyle: {
-        fontSize: 14,
-        color: '#333',
+        align: 'center',
+        color: '#3a4d3b',
         fontFamily: 'Arial',
-        letterspacing: '2px'
+        fontSize: '0.8em',
+        letterSpacing: '1px'
       },
       left: 'center',
       top: 'top'
     },
     tooltip: { trigger: 'item' },
-    grid: { left: '3%', right: '20%', bottom: '14%', top: '18%', containLabel: true },
-    legend: { show: true, bottom: 0 },
+    grid: { left: '3%', right: '4%', bottom: '14%', top: '18%', containLabel: true },
+    legend: { data: topGenresByCount, 
+      bottom: 0, 
+      textStyle: {
+        fontSize: 10,
+        fontFamily: 'Arial',
+        color: '#3a4d3b'
+      }
+    },
     toolbox: { feature: { saveAsImage: {} } },
     xAxis: {
       type: 'category',
@@ -405,7 +438,8 @@ $: top_10_books = books
         fontSize: 14
       }
     },
-    series: bumpSeriesList
+    series: bumpSeriesList,
+    color: colorPalette
   };
 
 
@@ -459,15 +493,17 @@ $: filteredBarLineChartData = barLineChartData.filter(d => d.year >= start && d.
 $: barLineChartOptions = {
   toolbox: { feature: { saveAsImage: {} } },
   title: {
-    text: "Average Rating over Time",
+    text: "Average Rating",
+    top: '12px',
     textStyle: {
-        fontSize: 14,
-        color: '#333',
-        fontFamily: 'Arial',
-        letterspacing: '2px'
-      },
-      left: 'center',
-      top: 'top'
+      align: 'center',
+      color: '#3a4d3b',
+      fontFamily: 'Arial',
+      fontSize: '0.8em',
+      letterSpacing: '1px'
+    },
+    left: 'center',
+    top: 'top'
   },
   tooltip: {
     trigger: 'axis',
@@ -479,15 +515,20 @@ $: barLineChartOptions = {
 
       return `
         <strong>${year}</strong><br/>
-        Avg Rating: ${data.avgRating.toFixed(2)}<br/>
+        Avg Rating for all Genres: ${data.avgRating.toFixed(2)}<br/>
         Best Genre: ${data.bestGenreName} (${data.bestGenreRating.toFixed(2)})<br/>
         Worst Genre: ${data.worstGenreName} (${data.worstGenreRating.toFixed(2)})
       `;
     }
   },
   legend: {
-    data: ['Avg Rating', 'Best Genre', 'Worst Genre'],
-    bottom: 0
+    data: ['Avg Rating for all Genres', 'Best Genre', 'Worst Genre'],
+    bottom: 0,
+    textStyle: {
+      fontSize: 10,
+      fontFamily: 'Arial',
+      color: '#3a4d3b'
+    }
   },
   xAxis: {
     type: 'category',
@@ -516,7 +557,7 @@ $: barLineChartOptions = {
       itemStyle: { color: '#f2b5b5' }
     },
     {
-      name: 'Avg Rating',
+      name: 'Avg Rating for all Genres',
       type: 'line',
       showSymbol: false,
       data: filteredBarLineChartData.map(d => d.avgRating),
@@ -532,7 +573,7 @@ $: books.forEach(book => {
   const author = book.authors?.trim();
   const genre = book.categories?.trim();
 
-  if (!author || !genre || !top10GenresOverall.includes(genre)) return;
+  if (!author || !genre || !top5GenresOverall.includes(genre)) return;
 
   if (!authorCountPerGenre[genre]) {
     authorCountPerGenre[genre] = new Set();
@@ -542,7 +583,7 @@ $: books.forEach(book => {
 });
 
 $: filteredBooksByTopGenres = books.filter(book =>
-  top10GenresOverall.includes(book.categories?.trim())
+  top5GenresOverall.includes(book.categories?.trim())
 );
 
 $: genreLinksMap = (() => {
@@ -582,71 +623,19 @@ $: genreLinksMap = (() => {
   return { map, genreSet };
 })();
 
-// häufigste Farbe per genre group
-
-const categoryGroups = {
-        "Fiction": ['Fiction', 'Juvenile Fiction', 'Juvenile Nonfiction', 'Drama', 'Poetry', 'Humor', 'Comics & Graphic Novels'],
-        "Arts & Leisure Time": ['Literary Criticism', 'Computers', 'Cooking', 'Performing Arts', 'Travel', 'Art', 'Literary Collections'],
-        "Guides": ['Family & Relationships', 'Body, Mind & Spirit', 'Language Arts & Disciplines', 'Business & Economics', 'Health & Fitness', 'Self-Help'],
-        "Non-Fiction": ['Social Science', 'Religion', 'Science', 'History', 'Psychology', 'Philosophy', 'Political Science', 'Biography & Autobiography']
-    }
-
-$: categoryGroupColors = {};
-
-const groupToBooks = {};
-
-$: books.forEach(book => {
-  const genre = book.categories?.trim();
-  if (!genre) return;
-
-  for (const [groupName, genres] of Object.entries(categoryGroups)) {
-    if (genres.includes(genre)) {
-      if (!groupToBooks[groupName]) groupToBooks[groupName] = [];
-      groupToBooks[groupName].push(book);
-      break;
-    }
-  }
-});
-
-$: Object.entries(groupToBooks).forEach(([groupName, booksInGroup]) => {
-  const rgbVectors = booksInGroup
-    .map(b => parseRGB(b.dominant_color))
-    .filter(v => v.length === 3 && v.every(n => !isNaN(n)));
-
-  if (rgbVectors.length === 0) return;
-
-  const { centroids, assignments } = getColorCentroids(rgbVectors, 20);
-
-  const clusterCounts = Array(20).fill(0);
-  assignments.forEach(i => clusterCounts[i]++);
-
-  const mostFrequentIndex = clusterCounts.indexOf(Math.max(...clusterCounts));
-  const rgb = centroids[mostFrequentIndex];
-
-  categoryGroupColors[groupName] = `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
-});
-
-function getGroupForGenre(genre) {
-  for (const [groupName, genres] of Object.entries(categoryGroups)) {
-    if (genres.includes(genre)) return groupName;
-  }
-  return null;
-}
 
 function getGroupIndex(genre) {
-  const groupName = getGroupForGenre(genre);
-  if (!graphCategories || !groupName) return 0;
-
-  const index = graphCategories.findIndex(c => c.name === groupName);
-  return index !== -1 ? index : 0;
+  return top5GenresOverall.indexOf(genre);
 }
 
-$: graphCategories = Object.entries(categoryGroupColors).map(([groupName, color]) => ({
-  name: groupName,
-  itemStyle: { color }
+$: graphCategories = top5GenresOverall.map((name, index) => ({
+  name,
+  itemStyle: {
+    color: colorPalette[index]
+  }
 }));
 
-$: graphNodes = top10GenresOverall.map(genre => {
+$: graphNodes = top5GenresOverall.map(genre => {
   const authorCount = authorCountPerGenre[genre]?.size || 0;
   const categoryIndex = getGroupIndex(genre);
 
@@ -656,30 +645,35 @@ $: graphNodes = top10GenresOverall.map(genre => {
     category: categoryIndex,
     symbolSize: Math.sqrt(authorCount),
     itemStyle: {
-      borderColor: '#999',     // 👈 z. B. dunkle Umrandung
-      borderWidth: 1           // 👈 Dicke der Linie
+      borderColor: '#999',    
+      borderWidth: 1           
     }
   };
 });
 
-$: graphLinks = Object.entries(genreLinksMap.map).map(([key, value]) => {
-  const [source, target] = key.split('↔');
-  const sourceGroup = getGroupForGenre(source);
-  const color = categoryGroupColors[sourceGroup] || '#ccc';
+$: graphLinks = Object.entries(genreLinksMap.map)
+  .filter(([key]) => {
+    const [g1, g2] = key.split('↔');
+    return top5GenresOverall.includes(g1) && top5GenresOverall.includes(g2);
+  })
+  .map(([key, value]) => {
+    const [source, target] = key.split('↔');
+    const sourceIndex = top5GenresOverall.indexOf(source);
+    const color = colorPalette[sourceIndex] || '#ccc';
 
-  return {
-    source,
-    target,
-    value,
-    lineStyle: {
-      color,
-      width: Math.min(value, 5),
-      opacity: 0.6,
-      shadowColor: '#777',
-      shadowBlur:1
-    }
-  };
-});
+    return {
+      source,
+      target,
+      value,
+      lineStyle: {
+        color,
+        width: Math.min(value, 8),
+        opacity: 0.7,
+        shadowColor: '#999',
+        shadowBlur: 1
+      }
+    };
+  });
 
 $: graphChartOptions = {
   title: {
@@ -687,16 +681,17 @@ $: graphChartOptions = {
     left: 'left',
     top: 'top',
     textStyle: {
-      fontSize: 14,
-      color: '#333',
+      align: 'center',
+      color: '#3a4d3b',
       fontFamily: 'Arial',
-      letterspacing: '2px'
+      fontSize: '0.8em',
+      letterSpacing: '1px'
     }
   },
   legend: [{
     data: graphCategories.map(c => c.name),
     orient: 'vertical',
-    top: '35',
+    top: '15',
     left: 'left',
     textStyle: {
       fontSize: 10
@@ -721,13 +716,12 @@ $: graphChartOptions = {
       data: graphNodes,
       links: graphLinks,
       categories: graphCategories,
-      center: ['25%', '50%'],
+      center: ['23%', '50%'],
       radius: '80%',
       roam: true,
       label: { show: false },
       emphasis: { label: { show: false } },
       lineStyle: {
-        color: 'source',
         curveness: 0.2
       }
     }
@@ -845,14 +839,16 @@ $: bubbleChartOptions = {
   toolbox: { feature: { saveAsImage: {} } },
   title: {
     text: "Average Rating per Color",
+    top: '12px',
     textStyle: {
-        fontSize: 14,
-        color: '#333',
-        fontFamily: 'Arial',
-        letterspacing: '2px'
-      },
-      left: 'center',
-      top: 'top'
+      align: 'center',
+      color: '#3a4d3b',
+      fontFamily: 'Arial',
+      fontSize: '0.8em',
+      letterSpacing: '1px'
+    },
+    left: 'center',
+    top: 'top'
   },
   xAxis: { type: 'value', show: false, min: 0, max: 100 },
   yAxis: {

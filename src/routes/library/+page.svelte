@@ -19,12 +19,12 @@
     let selectedBook = null;
     let myLibrary = [];
 
-    // Initialbereich: 1970–2020
-    let start = 1876;
+    // Initialbereich
+    let start = 1980;
     let end = 2019;
 
     // Dynamische Jahrgrenzen
-    let minPublishedYear = 1876;
+    let minPublishedYear = 1980;
     let maxPublishedYear = 2019;
 
     // Filter Rating
@@ -130,10 +130,10 @@
         maxPagesFilter = maxPages;
 
         if (books.length > 0 && myLibrary.length === 0) {
-            // Bücher mit Drama oder Fiction
+            // Bücher mit Cooking oder Fiction
             const favored = books.filter(b =>
                 b.categories?.includes('Fiction') ||
-                b.categories?.includes('Drama')
+                b.categories?.includes('Cooking')
             );
 
             // Restliche Bücher
@@ -141,8 +141,8 @@
 
             // Mische bevorzugte und andere Bücher
             const combined = [
-                ...favored.sort(() => 0.5 - Math.random()).slice(0, 150),
-                ...others.sort(() => 0.5 - Math.random()).slice(0, 150)
+                ...favored.sort(() => 0.5 - Math.random()).slice(0, 200),
+                ...others.sort(() => 0.5 - Math.random()).slice(0, 50)
             ];
 
             // Extrahiere isbn13
@@ -270,7 +270,7 @@
                     }
                 },
                 {
-                    value: [5,4.5,3,3.8,4,1.5,5,3,2.5,3.5],
+                    value: radarUserTaste,
                     name: 'My Taste',
                     itemStyle: {
                         color: '#a3c4a5'

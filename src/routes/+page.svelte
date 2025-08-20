@@ -213,11 +213,6 @@ $: top_10_books = books
         return [x, y];
       },
       trigger: 'item',
-      textStyle: {
-        fontFamily: 'Coolvetica Rg, Arial',
-        fontSize: 13,
-        color: '#3a4d3b'
-      },
       formatter: function (params) {
         const book = params.data.book;
         const rank = params.data.rank;
@@ -407,7 +402,33 @@ $: top_10_books = books
       left: 'center',
       top: 'top'
     },
-    tooltip: { trigger: 'item' },
+    tooltip: {
+      trigger: 'item',
+      formatter: function (params) {
+        const genre = params.seriesName;
+        const year = params.name;
+
+        const relevantBooks = books.filter(b =>
+          parseInt(b.published_year) === parseInt(year) &&
+          b.categories?.split(',').map(c => c.trim()).includes(genre)
+        );
+
+        const ratings = relevantBooks.map(b => parseFloat(b.ratings_count)).filter(n => !isNaN(n));
+        const avgRatings = relevantBooks.map(b => parseFloat(b.average_rating)).filter(n => !isNaN(n));
+
+        const totalRatings = ratings.reduce((a, b) => a + b, 0);
+        const avgRating = avgRatings.length > 0
+          ? (avgRatings.reduce((a, b) => a + b, 0) / avgRatings.length).toFixed(2)
+          : 'N/A';
+
+        return `
+          <strong>${genre}</strong><br/>
+          Year: ${year}<br/>
+          Avg. Rating: ${avgRating}<br/>
+          Total Ratings: ${totalRatings}
+        `;
+      }
+    },
     grid: { left: '3%', right: '4%', bottom: '14%', top: '18%', containLabel: true },
     legend: { data: topGenresByCount, 
       bottom: 0, 
@@ -515,14 +536,14 @@ $: barLineChartOptions = {
 
       return `
         <strong>${year}</strong><br/>
-        Avg Rating for all Genres: ${data.avgRating.toFixed(2)}<br/>
+        Avg. Rating for all Genres: ${data.avgRating.toFixed(2)}<br/>
         Best Genre: ${data.bestGenreName} (${data.bestGenreRating.toFixed(2)})<br/>
         Worst Genre: ${data.worstGenreName} (${data.worstGenreRating.toFixed(2)})
       `;
     }
   },
   legend: {
-    data: ['Avg Rating for all Genres', 'Best Genre', 'Worst Genre'],
+    data: ['Avg. Rating for all Genres', 'Best Genre', 'Worst Genre'],
     bottom: 0,
     textStyle: {
       fontSize: 10,
@@ -557,7 +578,7 @@ $: barLineChartOptions = {
       itemStyle: { color: '#f2b5b5' }
     },
     {
-      name: 'Avg Rating for all Genres',
+      name: 'Avg. Rating for all Genres',
       type: 'line',
       showSymbol: false,
       data: filteredBarLineChartData.map(d => d.avgRating),
@@ -865,7 +886,7 @@ $: bubbleChartOptions = {
       const rgb = centroids[i];
       const rgbString = `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
 
-      return `Cluster ${rgbString}<br/>Books: ${params.data[2]}<br/>Rating: ${rating}`;
+      return `<strong>Cluster ${rgbString}</strong><br/>Books: ${params.data[2]}<br/>Rating: ${rating}`;
     }
   },
   series: [

@@ -191,10 +191,9 @@
             left: 'center',
             itemGap: 50, // Abstand zwischen Einträgen
             textStyle: {
-                fontFamily: 'Coolvetica Rg, Arial',
-                fontSize: '0.8em',
-                color: '#3a4d3b',
-                letterSpacing: '1.2px'
+                fontFamily: 'Arial',
+                fontSize: '0.7em',
+                letterSpacing: '1px'
             },
             data: ['Average Taste', 'My Taste']
         },
@@ -223,9 +222,9 @@
                 return name;
                 },
                 textStyle: {
-                fontSize: 11,
-                color: '#3a4d3b',
-                fontFamily: 'Coolvetica Rg, Arial'
+                fontSize: 10,
+                color: '#000',
+                fontFamily: 'Arial'
                 }
             }
         },
@@ -236,9 +235,9 @@
             },
             trigger: 'item',
             textStyle: {
-                fontFamily: 'Coolvetica Rg, Arial',
-                fontSize: 13,
-                color: '#3a4d3b'
+                fontFamily: 'Arial',
+                fontSize: 12,
+                color: '#000'
             },
             formatter: function (params) {
                 const param_name = params.name;
@@ -290,10 +289,10 @@
     $: topGenresLibrary = Object.keys(userGenreCounts);
 
     const categoryGroups = {
-        "Fiction": ['Fiction', 'Juvenile Fiction', 'Juvenile Nonfiction', 'Drama', 'Poetry', 'Humor', 'Comics & Graphic Novels'],
+        "Fiction": ['Fiction', 'Juvenile Fiction', 'Drama', 'Poetry', 'Humor', 'Comics & Graphic Novels'],
         "Arts & Leisure Time": ['Literary Criticism', 'Computers', 'Cooking', 'Performing Arts', 'Travel', 'Art', 'Literary Collections'],
         "Guides": ['Family & Relationships', 'Body, Mind & Spirit', 'Language Arts & Disciplines', 'Business & Economics', 'Health & Fitness', 'Self-Help'],
-        "Non-Fiction": ['Social Science', 'Religion', 'Science', 'History', 'Psychology', 'Philosophy', 'Political Science', 'Biography & Autobiography']
+        "Non-Fiction": ['Juvenile Nonfiction', 'Social Science', 'Religion', 'Science', 'History', 'Psychology', 'Philosophy', 'Political Science', 'Biography & Autobiography']
     }
 
     function getColorByLibraryCount(count, max) {
@@ -335,7 +334,7 @@
             top: '12px',
             textStyle: {
                 align: 'center',
-                color: '#3a4d3b',
+                color: '#000',
                 fontFamily: 'Arial',
                 align: 'center',
                 fontSize: '0.7em',
@@ -353,9 +352,9 @@
                 r0: '0%',
                 r: '60%',
                 label: {
-                    fontSize: 11,
-                    color: '#3a4d3b',
-                    fontFamily: 'Coolvetica Rg, Arial',
+                    fontSize: 9,
+                    color: '#000',
+                    fontFamily: 'Arial',
                     rotate: 'radial'
                 }
             },
@@ -363,10 +362,10 @@
                 r0: '60%',
                 r: '85%',
                 label: {
-                fontSize: 10,
-                color: '#3a4d3b',
-                fontFamily: 'Coolvetica Rg, Arial',
-                align: 'left',
+                    fontSize: 9,
+                    color: '#000',
+                    fontFamily: 'Arial',
+                    align: 'left',
                 rotate: 0,
                 show: false
                 }
@@ -379,9 +378,9 @@
             },
             trigger: 'item',
             textStyle: {
-                fontFamily: 'Coolvetica Rg, Arial',
-                fontSize: 13,
-                color: '#3a4d3b'
+                fontFamily: 'Arial',
+                fontSize: 12,
+                color: '#000'
             },
             formatter: function (params) {
                 const name = params.name;
@@ -564,7 +563,7 @@
             >
                 <div class="scrollable-tab-content">
                     <div class="grid grid-cols-9 gap-2 items-center p-2">
-                        {#each localFilteredBooks.slice(0, 100) as book}
+                        {#each localFilteredBooks.slice(0, 500) as book}
                             <div class="w-full h-35">
                                 <BookComponent {book} index={100} onOpenSidebar={openSidebar} />
                             </div>

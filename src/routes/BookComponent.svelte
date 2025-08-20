@@ -34,8 +34,8 @@
   </div>
 
 </button>
-<Tooltip class="bg-[#fffefc] text-[#3a4d3b] px-3 py-2 rounded shadow-lg ease-in-out border border-[#a3c4a5]"
-          style="font-family: 'Coolvetica Rg', Arial; letter-spacing: 1.2px; font-size: 0.8em;"
+<Tooltip class="bg-[#fffefc] text-[#000] px-3 py-2 rounded shadow-lg ease-in-out border border-[#a3c4a5]"
+          style="font-family: Arial; letter-spacing: 1px; font-size: 0.7em;"
           animation="duration-200">
       {book.title}<br />
       <span style="color: #a3c4a5;">{book.authors}</span>
